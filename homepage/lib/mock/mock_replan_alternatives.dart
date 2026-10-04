@@ -1,0 +1,26 @@
+const mockKyotoReplanAlternatives = [
+  {
+    'id': 'kyoto_kiyomizu',
+    'title': 'Kiyomizu-dera',
+    'description': 'A UNESCO World Heritage temple with a famous wooden stage and a short walk from the current itinerary area.',
+    'distance': '0.8 km',
+    'travel_time': '12 min walk',
+    'opening_hours': '6:00-18:00',
+    'visit_duration': '45-60 min',
+    'price': 'RM200/entry',
+    'category': 'Temple',
+    'image_url': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1000&q=85',
+  },
+  {
+    'id': 'kyoto_sannenzaka',
+    'title': 'Sannenzaka',
+    'description': 'Sannenzaka is a charming, stone-paved pedestrian slope in Kyoto lined with traditional wooden buildings.',
+    'distance': '1.0 km',
+    'travel_time': '17 min walk',
+    'opening_hours': '10:00-17:00',
+    'visit_duration': '45-60 min',
+    'price': 'Free',
+    'category': 'Street',
+    'image_url': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1000&q=85',
+  },
+];
