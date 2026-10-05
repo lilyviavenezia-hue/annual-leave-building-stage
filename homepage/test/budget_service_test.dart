@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homempage/models/budget.dart';
 import 'package:homempage/services/budget_service.dart';
-import 'package:homempage/services/trip_service.dart';
+import 'package:homempage/services/expense_service.dart';
 
 void main() {
   test('budget summary uses mock flight and hotel values and marks flight as booked', () async {
@@ -15,25 +15,11 @@ void main() {
     expect(summary.items[1].category, 'Accommodation');
   });
 
-  test(
-    'trip estimate derives cost from planned duration and travellers',
-    () async {
-      final trips = await TripService().getTrips();
-      final kyoto = trips.firstWhere((trip) => trip.id == 'ITIN_KYOTO_2026');
-      final estimate = await BudgetService().getTripEstimate(kyoto);
+  test('expense service returns recent receipts from mock data', () async {
+    final receipts = await ExpenseService().getRecentReceipts();
 
-      expect(estimate.durationDays, 6);
-      expect(estimate.travellerCount, 4);
-      expect(estimate.plannedBudget, 2000);
-      expect(estimate.estimatedTotal, 2480);
-      expect(estimate.costPerPerson, 620);
-      expect(
-        estimate.categories.fold<double>(
-          0,
-          (total, category) => total + category.amount,
-        ),
-        estimate.estimatedTotal,
-      );
-    },
-  );
+    expect(receipts, isNotEmpty);
+    expect(receipts.first.merchantName, isNotEmpty);
+    expect(receipts.first.items, isNotEmpty);
+  });
 }

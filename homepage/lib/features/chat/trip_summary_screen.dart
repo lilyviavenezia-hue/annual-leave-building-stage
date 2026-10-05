@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/group_trip_summary.dart';
 import '../../services/group_summary_service.dart';
@@ -51,6 +52,12 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     }
   }
 
+  void _handleReadyPressed() {
+    if (mounted) {
+      context.go('/trips');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,18 +85,13 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 8),
-
-                  // 1. Segmented Control Tab Switcher
                   SummarySegmentedControl(
                     selectedIndex: _selectedTabIndex,
                     onTabChanged: (index) {
                       setState(() => _selectedTabIndex = index);
                     },
                   ),
-
                   const SizedBox(height: 16),
-
-                  // 2. Tab Views
                   Expanded(
                     child: _selectedTabIndex == 0
                         ? SummaryOverviewTab(
@@ -102,12 +104,15 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                           )
                         : SummarySuggestionsTab(
                             suggestions: _suggestions,
+                            destinationCity:
+                                _tripSummary?.destination ?? 'Kyoto',
                           ),
                   ),
-
-                  // 3. Host Action Bar
                   if (_selectedTabIndex == 0 && _tripSummary != null)
-                    HostActionBar(tripSummary: _tripSummary!),
+                    HostActionBar(
+                      tripSummary: _tripSummary!,
+                      onReadyPressed: _handleReadyPressed,
+                    ),
                 ],
               ),
             ),

@@ -7,6 +7,7 @@ class HotelOption {
   final String pricePerNightFormatted; // e.g., "RM120/nt" or "RM180/nt"
   final List<String> amenities; // e.g., ["WiFi", "Breakfast", "Spa"]
   final String bookingUrl;
+  bool isFavourite;
 
   HotelOption({
     required this.id,
@@ -17,6 +18,7 @@ class HotelOption {
     required this.pricePerNightFormatted,
     required this.amenities,
     required this.bookingUrl,
+    this.isFavourite = false,
   });
 
   factory HotelOption.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,9 @@ class HotelOption {
               .toList() ??
           [],
       bookingUrl: json['booking_url'] as String? ?? '',
+      isFavourite: json['is_favourite'] as bool? ??
+          json['isFavourite'] as bool? ??
+          false,
     );
   }
 
@@ -45,6 +50,7 @@ class HotelOption {
       'price_per_night_formatted': pricePerNightFormatted,
       'amenities': amenities,
       'booking_url': bookingUrl,
+      'is_favourite': isFavourite,
     };
   }
 }

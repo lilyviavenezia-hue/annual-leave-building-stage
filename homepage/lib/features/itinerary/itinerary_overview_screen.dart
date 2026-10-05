@@ -54,7 +54,6 @@ class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
         : PanelState.hidden;
     _itineraryFuture = _itineraryService.getItineraryOverview(
       widget.itineraryId,
-      trip: widget.initialTrip,
     );
     _dayItemsFuture = _itineraryService.getDayDetailItems(
       widget.itineraryId,

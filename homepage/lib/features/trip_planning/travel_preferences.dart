@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../models/trip.dart';
-import 'trip_booking_flow_screen.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/trip.dart';
 import '../../services/preference_service.dart';
 import 'trip_planning_screen.dart'
     show DefaultPreferencesOverlay, TripCustomizationSwipeOverlay;
@@ -12,13 +11,15 @@ import 'widgets/swipe_instructions_modal.dart';
 import 'widgets/voice_input_card.dart';
 
 class TravelPreferencesScreen extends StatefulWidget {
-  const TravelPreferencesScreen({super.key, this.tripDraft});
+  const TravelPreferencesScreen({
+    super.key,
+    this.tripDraft,
+  });
 
   final Trip? tripDraft;
 
   @override
-  State<TravelPreferencesScreen> createState() =>
-      _TravelPreferencesScreenState();
+  State<TravelPreferencesScreen> createState() => _TravelPreferencesScreenState();
 }
 
 class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
@@ -67,8 +68,9 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          DefaultPreferencesOverlay(transcript: _transcriptController.text),
+      builder: (_) => DefaultPreferencesOverlay(
+        transcript: _transcriptController.text,
+      ),
     );
   }
 
@@ -96,24 +98,13 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
   }
 
   void _generateItinerary() {
-    final trip =
-        widget.tripDraft ??
-        Trip(
-          id: 'TRIP_${DateTime.now().millisecondsSinceEpoch}',
-          destination: 'Kyoto, Japan',
-          dateRange: '12 - 18 October 2026',
-          duration: '6 days',
-          budget: 'RM 3,000 budget',
-          imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1000&auto=format&fit=crop',
-          status: 'draft',
-          travellerCount: 4,
-          plannedBudget: 3000,
-        );
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TripBookingFlowScreen(trip: trip),
-      ),
-    );
+    final generatedItineraryId = DateTime.now()
+        .toUtc()
+        .toIso8601String()
+        .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
+        .toLowerCase();
+
+    context.push('/home/itinerary', extra: generatedItineraryId);
   }
 
   @override
@@ -198,22 +189,14 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.star_rate_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      Icon(Icons.star_rate_rounded, color: Colors.white, size: 20),
                       SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          'Generate my itinerary',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                      Text(
+                        'Generate my itinerary',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ],

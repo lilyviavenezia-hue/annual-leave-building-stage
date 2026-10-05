@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:homempage/core/theme/app_theme.dart';
-
-import '../../models/trip.dart';
-
 import 'package:homempage/features/trip_planning/travel_preferences.dart';
 import 'package:homempage/features/trip_planning/trip_collaborators_screen.dart';
-
 import 'widgets/budget_range_slider.dart';
 import 'widgets/location_dropdown_field.dart';
 import 'widgets/travellers_counter_card.dart';
@@ -21,8 +17,8 @@ class CreateTripScreen extends StatefulWidget {
 
 class _CreateTripScreenState extends State<CreateTripScreen> {
   bool _isSoloSelected = true;
-  String? _selectedFrom = 'Kuala Lumpur';
-  String? _selectedTo = 'Kyoto';
+  String? _selectedFrom;
+  String? _selectedTo;
   int _numberOfTravellers = 4;
   RangeValues _budgetRange = const RangeValues(500, 3000);
   DateTimeRange _selectedDates = DateTimeRange(
@@ -30,91 +26,37 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
     end: DateTime(2026, 10, 18),
   );
 
-  void _handleGroupSelected() {
+  Future<void> _handleGroupSelected() async {
     setState(() => _isSoloSelected = false);
-  }
 
-  Trip _createTripDraft() {
-    final destination = _destinationLabel(_selectedTo ?? 'Kyoto');
-    final durationDays = _selectedDates.end
-        .difference(_selectedDates.start)
-        .inDays;
-    final months = const [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    final dateRange =
-        '${_selectedDates.start.day} - ${_selectedDates.end.day} '
-        '${months[_selectedDates.end.month - 1]} ${_selectedDates.end.year}';
-    final photo = _destinationPhoto(destination);
-
-    return Trip(
-      id: 'TRIP_${DateTime.now().millisecondsSinceEpoch}',
-      destination: destination,
-      dateRange: dateRange,
-      duration: '${durationDays < 1 ? 1 : durationDays} days',
-      budget: 'RM ${_budgetRange.end.round()} budget',
-      imageUrl: photo,
-      status: 'draft',
-      travellerCount: _numberOfTravellers,
-      plannedBudget: _budgetRange.end,
-      originCity: _selectedFrom ?? 'Kuala Lumpur',
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TripCollaboratorsScreen(),
+      ),
     );
+
+    if (mounted) {
+      setState(() => _isSoloSelected = true);
+    }
   }
 
   void _handleNext() {
-    final tripDraft = _createTripDraft();
     if (_isSoloSelected) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => TravelPreferencesScreen(tripDraft: tripDraft),
+          builder: (context) => const TravelPreferencesScreen(),
         ),
       );
     } else {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => TripCollaboratorsScreen(
-            startWithNoMembers: true,
-            tripDraft: tripDraft,
-          ),
+          builder: (context) => const TripCollaboratorsScreen(),
         ),
       );
     }
-  }
-
-  String _destinationLabel(String city) {
-    const countries = {
-      'Kyoto': 'Japan',
-      'Osaka': 'Japan',
-      'Tokyo': 'Japan',
-      'Penang': 'Malaysia',
-      'Bali': 'Indonesia',
-      'Langkawi': 'Malaysia',
-      'Ipoh': 'Malaysia',
-    };
-    return '$city, ${countries[city] ?? 'Japan'}';
-  }
-
-  String _destinationPhoto(String destination) {
-    if (destination.contains('Bali')) {
-      return 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1000&q=80';
-    }
-    if (destination.contains('Penang')) {
-      return 'https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Skyline_of_George_Town%2C_Penang_at_night_Nov2024-29-17.jpg/1280px-Skyline_of_George_Town%2C_Penang_at_night_Nov2024-29-17.jpg';
-    }
-    return 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1000&auto=format&fit=crop';
   }
 
   @override
@@ -168,26 +110,12 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                   LocationDropdownField(
                     hint: 'From',
                     value: _selectedFrom,
-                    options: const [
-                      'Kuala Lumpur',
-                      'Penang',
-                      'Ipoh',
-                      'Langkawi',
-                    ],
                     onChanged: (val) => setState(() => _selectedFrom = val),
                   ),
                   const SizedBox(height: 12),
                   LocationDropdownField(
                     hint: 'To',
                     value: _selectedTo,
-                    options: const [
-                      'Kyoto',
-                      'Osaka',
-                      'Tokyo',
-                      'Penang',
-                      'Bali',
-                      'Langkawi',
-                    ],
                     onChanged: (val) => setState(() => _selectedTo = val),
                   ),
                   const SizedBox(height: 24),
@@ -203,16 +131,14 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                   // 4. Date Picker
                   TripDatePickerCard(
                     selectedDates: _selectedDates,
-                    onDatesSelected: (dates) =>
-                        setState(() => _selectedDates = dates),
+                    onDatesSelected: (dates) => setState(() => _selectedDates = dates),
                   ),
                   const SizedBox(height: 24),
 
                   // 5. Budget Slider
                   BudgetRangeSlider(
                     range: _budgetRange,
-                    onChanged: (values) =>
-                        setState(() => _budgetRange = values),
+                    onChanged: (values) => setState(() => _budgetRange = values),
                   ),
                   const SizedBox(height: 32),
 

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_theme.dart';
+
 import 'package:homempage/models/leave_status.dart';
+
 import '../../../models/leave_combo.dart';
 import '../../../services/leave_service.dart';
-import 'widgets/calendar_grid.dart';
 import 'widgets/leave_combo_card.dart';
+import 'widgets/leave_calendar_card.dart';
 
 class LeaveOptimizerModal extends StatefulWidget {
   const LeaveOptimizerModal({super.key});
@@ -16,42 +19,104 @@ class LeaveOptimizerModal extends StatefulWidget {
 class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
   final LeaveService _leaveService = LeaveService();
   late Future<List<LeaveCombo>> _leaveCombosFuture;
-  
+
   bool _isLoading = true;
 
-  int _selectedYear = 2026;
-  int _currentMonthIndex = 9;
-  int _leaveBalance = 18;
+  // Dynamic initial date instead of hardcoded values
+  int _selectedYear = DateTime.now().year;
+  int _currentMonthIndex = DateTime.now().month - 1;
+
+  int _leaveBalance = 0;
   Map<String, DateStatus> _dateStatuses = {};
 
   final List<String> _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
-  final List<int> _availableYears = [2025, 2026, 2027, 2028];
+  late final List<int> _availableYears;
 
   @override
   void initState() {
     super.initState();
+
+    // Automatically generate a year range around the current year
+    final currentYear = DateTime.now().year;
+
+    _availableYears = List.generate(5, (index) => currentYear - 2 + index);
+
     _loadInitialData();
-    _leaveCombosFuture = _leaveService.getLeaveCombos();
   }
 
+  /// 1. Dynamic Initial Load & Refetch Function
   Future<void> _loadInitialData() async {
-    final leaveData = await _leaveService.getUserLeaveData();
-    if (mounted) {
+    setState(() => _isLoading = true);
+
+    try {
+      final leaveData = await _leaveService.getUserLeaveData(
+        year: _selectedYear,
+      );
+
+      _leaveCombosFuture = _leaveService.getLeaveCombos(
+        year: _selectedYear,
+        month: _currentMonthIndex + 1,
+      );
+
+      if (mounted) {
+        setState(() {
+          _selectedYear = leaveData.selectedYear;
+          _leaveBalance = leaveData.leaveBalance;
+          _dateStatuses = leaveData.dateStatuses;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load leave data: $e')),
+        );
+      }
+    }
+  }
+
+  /// 2. Reload Combos when Month or Year changes
+  void _onMonthOrYearChanged() {
+    setState(() {
+      _leaveCombosFuture = _leaveService.getLeaveCombos(
+        year: _selectedYear,
+        month: _currentMonthIndex + 1,
+      );
+    });
+  }
+
+  void _onCalendarMonthChanged(int year, int monthIndex) {
+    if (year == _selectedYear) {
+      setState(() => _currentMonthIndex = monthIndex);
+      _onMonthOrYearChanged();
+    } else if (_availableYears.contains(year)) {
       setState(() {
-        _selectedYear = leaveData.selectedYear;
-        _leaveBalance = leaveData.leaveBalance;
-        _dateStatuses = leaveData.dateStatuses;
-        _isLoading = false;
+        _selectedYear = year;
+        _currentMonthIndex = monthIndex;
       });
+      _loadInitialData();
     }
   }
 
   void _showLeaveBalanceDialog() {
     final controller = TextEditingController(text: _leaveBalance.toString());
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -75,13 +140,20 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
             ),
             onPressed: () async {
               final val = int.tryParse(controller.text);
+
               if (val != null) {
                 setState(() => _leaveBalance = val);
                 await _leaveService.updateLeaveBalance(val);
               }
-              if (context.mounted) Navigator.pop(context);
+
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
-            child: const Text('Save', style: TextStyle(color: AppTheme.backgroundWhite)),
+            child: const Text(
+              'Save',
+              style: TextStyle(color: AppTheme.backgroundWhite),
+            ),
           ),
         ],
       ),
@@ -91,8 +163,65 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
   void _showStatusPickerBottomSheet(DateTime date) {
     final dateKey =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
     final currentStatus = _dateStatuses[dateKey] ?? DateStatus.normal;
 
+    // Public Holidays are system-provided and cannot be directly modified by the user
+    if (currentStatus == DateStatus.holiday) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: AppTheme.statusHolidayBg,
+                    radius: 12,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_months[date.month - 1]} ${date.day}, ${date.year}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'This day is an official Public Holiday. Public holidays are retrieved automatically and cannot be modified manually.',
+                style: TextStyle(color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(color: AppTheme.backgroundWhite),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Interactive picker for user-editable statuses
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -109,11 +238,38 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildStatusOption(context, dateKey, 'Normal Working Day', DateStatus.normal, AppTheme.cardBackground, currentStatus),
-            _buildStatusOption(context, dateKey, 'Busy / High Priority Work', DateStatus.busy, AppTheme.statusBusyBg, currentStatus),
-            _buildStatusOption(context, dateKey, 'Annual Leave', DateStatus.annualLeave, AppTheme.statusAnnualLeaveBg, currentStatus),
-            _buildStatusOption(context, dateKey, 'Public / Regional Holiday', DateStatus.holiday, AppTheme.statusHolidayBg, currentStatus),
-            _buildStatusOption(context, dateKey, 'Recommended Bridge Day', DateStatus.recommended, AppTheme.statusRecommendedBg, currentStatus),
+            _buildStatusOption(
+              context,
+              dateKey,
+              'Normal Working Day',
+              DateStatus.normal,
+              AppTheme.cardBackground,
+              currentStatus,
+            ),
+            _buildStatusOption(
+              context,
+              dateKey,
+              'Busy / High Priority Work',
+              DateStatus.busy,
+              AppTheme.statusBusyBg,
+              currentStatus,
+            ),
+            _buildStatusOption(
+              context,
+              dateKey,
+              'Annual Leave',
+              DateStatus.annualLeave,
+              AppTheme.statusAnnualLeaveBg,
+              currentStatus,
+            ),
+            _buildStatusOption(
+              context,
+              dateKey,
+              'Recommended Bridge Day',
+              DateStatus.recommended,
+              AppTheme.statusRecommendedBg,
+              currentStatus,
+            ),
           ],
         ),
       ),
@@ -129,11 +285,17 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
     DateStatus selectedStatus,
   ) {
     final isSelected = status == selectedStatus;
+
     return ListTile(
       leading: CircleAvatar(backgroundColor: color, radius: 12),
       title: Text(label),
-      trailing: isSelected ? const Icon(Icons.check, color: AppTheme.primaryGreen) : null,
-      onTap: () {
+      trailing: isSelected
+          ? const Icon(Icons.check, color: AppTheme.primaryGreen)
+          : null,
+      onTap: () async {
+        final previousStatus = _dateStatuses[dateKey];
+
+        // Optimistic UI Update
         setState(() {
           if (status == DateStatus.normal) {
             _dateStatuses.remove(dateKey);
@@ -141,7 +303,31 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
             _dateStatuses[dateKey] = status;
           }
         });
+
         Navigator.pop(context);
+
+        // Send to backend API
+        final success = await _leaveService.updateDateStatus(dateKey, status);
+
+        // Rollback if sync fails
+        if (!success && mounted) {
+          setState(() {
+            if (previousStatus != null) {
+              _dateStatuses[dateKey] = previousStatus;
+            } else {
+              _dateStatuses.remove(dateKey);
+            }
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to update date status on backend'),
+            ),
+          );
+        } else {
+          // Re-evaluate recommendations based on new status
+          _onMonthOrYearChanged();
+        }
       },
     );
   }
@@ -160,18 +346,27 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.textDark),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppTheme.textDark,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text(
             'Leave Optimizer',
-            style: TextStyle(color: AppTheme.textDark, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppTheme.textDark,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -179,16 +374,23 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.cardBackground,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: AppTheme.textMuted.withValues(alpha: 0.2),
+                            ),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
                               value: _selectedYear,
-                              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                              ),
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -201,8 +403,13 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                                 );
                               }).toList(),
                               onChanged: (newYear) {
-                                if (newYear != null) {
-                                  setState(() => _selectedYear = newYear);
+                                if (newYear != null &&
+                                    newYear != _selectedYear) {
+                                  setState(() {
+                                    _selectedYear = newYear;
+                                  });
+
+                                  _loadInitialData();
                                 }
                               },
                             ),
@@ -212,7 +419,10 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                           onTap: _showLeaveBalanceDialog,
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.badgeGreenLight,
                               borderRadius: BorderRadius.circular(12),
@@ -243,74 +453,12 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '${_months[_currentMonthIndex]} $_selectedYear',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.badgeGreenLight,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  '1 Public Holiday',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppTheme.primaryGreen,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _buildLegendItem('Busy', AppTheme.statusBusyBg),
-                              _buildLegendItem('Holiday', AppTheme.statusHolidayBg),
-                              _buildLegendItem('Annual Leave', AppTheme.statusAnnualLeaveBg),
-                              _buildLegendItem('Recommended', AppTheme.statusRecommendedBg),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          GestureDetector(
-                            onHorizontalDragEnd: (details) {
-                              if (details.primaryVelocity! < 0) {
-                                if (_currentMonthIndex < 11) {
-                                  setState(() => _currentMonthIndex++);
-                                }
-                              } else if (details.primaryVelocity! > 0) {
-                                if (_currentMonthIndex > 0) {
-                                  setState(() => _currentMonthIndex--);
-                                }
-                              }
-                            },
-                            child: CalendarGrid(
-                              selectedYear: _selectedYear,
-                              currentMonthIndex: _currentMonthIndex,
-                              dateStatuses: _dateStatuses,
-                              onDateTap: _showStatusPickerBottomSheet,
-                            ),
-                          ),
-                        ],
-                      ),
+                    LeaveCalendarCard(
+                      selectedYear: _selectedYear,
+                      currentMonthIndex: _currentMonthIndex,
+                      dateStatuses: _dateStatuses,
+                      onDateTap: _showStatusPickerBottomSheet,
+                      onMonthChanged: _onCalendarMonthChanged,
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -325,7 +473,8 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                     FutureBuilder<List<LeaveCombo>>(
                       future: _leaveCombosFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const Center(
                             child: Padding(
                               padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -334,8 +483,28 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                           );
                         }
 
-                        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const SizedBox.shrink();
+                        if (snapshot.hasError) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(
+                              child: Text(
+                                'Unable to fetch recommendations',
+                                style: TextStyle(color: AppTheme.textMuted),
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(
+                              child: Text(
+                                'No leave recommendations available for this month.',
+                                style: TextStyle(color: AppTheme.textMuted),
+                              ),
+                            ),
+                          );
                         }
 
                         final combos = snapshot.data!;
@@ -344,9 +513,12 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: combos.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            return LeaveComboCard.fromModel(combo: combos[index]);
+                            return LeaveComboCard.fromModel(
+                              combo: combos[index],
+                            );
                           },
                         );
                       },
@@ -355,23 +527,6 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
                 ),
               ),
       ),
-    );
-  }
-
-  Widget _buildLegendItem(String label, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
-        ),
-      ],
     );
   }
 }

@@ -18,6 +18,13 @@ class CollaboratorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final avatarUrl = person.avatarUrl;
+    final ImageProvider? avatarImage = avatarUrl == null
+        ? null
+        : avatarUrl.startsWith('assets/')
+        ? AssetImage(avatarUrl)
+        : NetworkImage(avatarUrl);
+
     if (isSearchResult) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -30,16 +37,28 @@ class CollaboratorTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundImage: person.avatarUrl != null ? NetworkImage(person.avatarUrl!) : null,
-              child: person.avatarUrl == null ? Text(person.name[0]) : null,
+              backgroundImage: avatarImage,
+              child: avatarUrl == null ? Text(person.name[0]) : null,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text(person.email, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                  Text(
+                    person.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    person.email,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -48,7 +67,9 @@ class CollaboratorTile extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text(
                 isAlreadyAdded ? 'Added' : 'Add',
@@ -70,8 +91,8 @@ class CollaboratorTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundImage: person.avatarUrl != null ? NetworkImage(person.avatarUrl!) : null,
-            child: person.avatarUrl == null ? Text(person.name[0]) : null,
+            backgroundImage: avatarImage,
+            child: avatarUrl == null ? Text(person.name[0]) : null,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -80,11 +101,18 @@ class CollaboratorTile extends StatelessWidget {
               children: [
                 Text(
                   person.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppTheme.textDark,
+                  ),
                 ),
                 Text(
                   person.email,
-                  style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -97,7 +125,11 @@ class CollaboratorTile extends StatelessWidget {
             ),
             child: const Text(
               'Added',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textMuted,
+              ),
             ),
           ),
         ],

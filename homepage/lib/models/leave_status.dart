@@ -39,13 +39,13 @@ extension DateStatusX on DateStatus {
     switch (status) {
       case 'busy':
         return DateStatus.busy;
-      case 'holiday':
-        return DateStatus.holiday;
       case 'annual_leave':
       case 'annualLeave':
         return DateStatus.annualLeave;
       case 'recommended':
         return DateStatus.recommended;
+      case 'holiday':
+        return DateStatus.holiday;
       default:
         return DateStatus.normal;
     }

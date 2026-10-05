@@ -12,23 +12,26 @@ class PollOption {
   });
 
   factory PollOption.fromJson(Map<String, dynamic> json) {
+    final votedUserIds =
+        (json['votedUserIds'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        [];
+
     return PollOption(
       id: json['id'] as String,
       text: json['text'] as String,
-      voteCount: json['voteCount'] as int? ?? 0,
-      votedUserIds: (json['votedUserIds'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
+      voteCount: votedUserIds.length,
+      votedUserIds: votedUserIds,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'text': text,
-        'voteCount': voteCount,
-        'votedUserIds': votedUserIds,
-      };
+    'id': id,
+    'text': text,
+    'voteCount': voteCount,
+    'votedUserIds': votedUserIds,
+  };
 
   PollOption copyWith({
     String? id,
@@ -36,11 +39,12 @@ class PollOption {
     int? voteCount,
     List<String>? votedUserIds,
   }) {
+    final updatedVoterIds = votedUserIds ?? this.votedUserIds;
     return PollOption(
       id: id ?? this.id,
       text: text ?? this.text,
-      voteCount: voteCount ?? this.voteCount,
-      votedUserIds: votedUserIds ?? this.votedUserIds,
+      voteCount: updatedVoterIds.length,
+      votedUserIds: updatedVoterIds,
     );
   }
 }
@@ -62,7 +66,8 @@ class GroupPoll {
     required this.options,
   });
 
-  int get totalVotes => options.fold(0, (sum, opt) => sum + opt.votedUserIds.length);
+  int get totalVotes =>
+      options.fold(0, (sum, opt) => sum + opt.votedUserIds.length);
 
   factory GroupPoll.fromJson(Map<String, dynamic> json) {
     return GroupPoll(
@@ -76,6 +81,15 @@ class GroupPoll {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'question': question,
+    'allowMultipleAnswers': allowMultipleAnswers,
+    'isExpanded': isExpanded,
+    'isClosed': isClosed,
+    'options': options.map((option) => option.toJson()).toList(),
+  };
 
   GroupPoll copyWith({
     String? id,

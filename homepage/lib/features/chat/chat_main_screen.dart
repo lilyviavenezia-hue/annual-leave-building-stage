@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../core/theme/app_theme.dart';
 import '../../models/chat_conversation.dart';
 import '../../models/trip_invitation.dart';
@@ -40,19 +39,9 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
   }
 
   Future<void> _handleAcceptInvitation(String invitationId) async {
-    final accepted = await _chatListService.acceptInvitation(invitationId);
-    if (!accepted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to accept this invitation.')),
-        );
-      }
-      return;
-    }
-    final conversations = await _chatListService.getConversations();
+    await _chatListService.acceptInvitation(invitationId);
     if (mounted) {
       setState(() {
-        _conversations = conversations;
         _invitations.removeWhere((inv) => inv.id == invitationId);
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -92,10 +81,7 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
           : RefreshIndicator(
               onRefresh: _loadData,
               child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 children: [
                   // Pop-out Host Invitations Header
                   if (_invitations.isNotEmpty) ...[
@@ -126,9 +112,7 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
                       ),
                     )
                   else
-                    ..._conversations.map(
-                      (chat) => _buildConversationTile(chat),
-                    ),
+                    ..._conversations.map((chat) => _buildConversationTile(chat)),
                 ],
               ),
             ),
@@ -149,15 +133,20 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
         children: [
           Row(
             children: [
-              _buildAvatar(invitation.hostAvatar, size: 36),
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: invitation.hostAvatar.isNotEmpty
+                    ? NetworkImage(invitation.hostAvatar)
+                    : null,
+                child: invitation.hostAvatar.isEmpty
+                    ? const Icon(Icons.person, size: 18)
+                    : null,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: RichText(
                   text: TextSpan(
-                    style: const TextStyle(
-                      color: AppTheme.textDark,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: AppTheme.textDark, fontSize: 13),
                     children: [
                       TextSpan(
                         text: invitation.hostName,
@@ -183,16 +172,12 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
             style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
                 onPressed: () => _handleDeclineInvitation(invitation.id),
-                child: const Text(
-                  'Decline',
-                  style: TextStyle(color: AppTheme.textMuted),
-                ),
+                child: const Text('Decline', style: TextStyle(color: AppTheme.textMuted)),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
@@ -206,10 +191,7 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
                 ),
                 child: const Text(
                   'Accept & Join',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -222,122 +204,100 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
   Widget _buildConversationTile(ChatConversation chat) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      child: Material(
+      decoration: BoxDecoration(
         color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 6,
-          ),
-          leading: Stack(
-            children: [
-              _buildAvatar(chat.avatarUrl, size: 48),
-              if (chat.isLiveSync)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundImage: NetworkImage(chat.avatarUrl),
+            ),
+            if (chat.isLiveSync)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
                 ),
-            ],
-          ),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ),
+          ],
+        ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                chat.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: AppTheme.textDark,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              _formatTimestamp(chat.lastMessageTime),
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+            ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Row(
             children: [
               Expanded(
                 child: Text(
-                  chat.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: AppTheme.textDark,
+                  chat.lastMessage,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: chat.unreadCount > 0 ? AppTheme.textDark : AppTheme.textMuted,
+                    fontWeight: chat.unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
                   ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(
-                _formatTimestamp(chat.lastMessageTime),
-                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Row(
-              children: [
-                Expanded(
+              if (chat.unreadCount > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryGreen,
+                    shape: BoxShape.circle,
+                  ),
                   child: Text(
-                    chat.lastMessage,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: chat.unreadCount > 0
-                          ? AppTheme.textDark
-                          : AppTheme.textMuted,
-                      fontWeight: chat.unreadCount > 0
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                    '${chat.unreadCount}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (chat.unreadCount > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primaryGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${chat.unreadCount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
-          onTap: () {
-            context.push('/chat/${chat.groupId}');
-          },
         ),
+        onTap: () {
+          // Navigate to the existing individual GroupChatScreen
+          context.push('/chat/${chat.groupId}');
+        },
       ),
     );
   }
 
   String _formatTimestamp(DateTime dt) {
     return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
-  Widget _buildAvatar(String avatarUrl, {required double size}) {
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: AppTheme.surfaceSecondary,
-      child: avatarUrl.isEmpty
-          ? Icon(Icons.people_outline, size: size * 0.55)
-          : ClipOval(
-              child: Image.network(
-                avatarUrl,
-                width: size,
-                height: size,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    Icon(Icons.people_outline, size: size * 0.55),
-              ),
-            ),
-    );
   }
 }

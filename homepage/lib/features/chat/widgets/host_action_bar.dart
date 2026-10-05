@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../models/group_trip_summary.dart';
 
 class HostActionBar extends StatelessWidget {
   final GroupTripSummary tripSummary;
+  final VoidCallback? onReadyPressed;
 
-  const HostActionBar({super.key, required this.tripSummary});
+  const HostActionBar({
+    super.key,
+    required this.tripSummary,
+    this.onReadyPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isReady = tripSummary.isReadyToPlan;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
@@ -48,9 +56,13 @@ class HostActionBar extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: tripSummary.isReadyToPlan
+            onPressed: isReady
                 ? () {
-                    // Host action
+                    if (onReadyPressed != null) {
+                      onReadyPressed!();
+                    } else {
+                      context.go('/trips');
+                    }
                   }
                 : null,
             style: ElevatedButton.styleFrom(
@@ -60,7 +72,7 @@ class HostActionBar extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
             child: Text(
-              tripSummary.isReadyToPlan ? 'Ready' : 'In Progress',
+              isReady ? 'Ready' : 'In Progress',
               style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),

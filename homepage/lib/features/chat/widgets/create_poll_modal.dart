@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../models/group_poll.dart';
 
 class CreatePollModal extends StatefulWidget {
-  final Function(GroupPoll poll) onPollCreated;
-
-  const CreatePollModal({super.key, required this.onPollCreated});
+  const CreatePollModal({super.key});
 
   @override
   State<CreatePollModal> createState() => _CreatePollModalState();
@@ -69,8 +68,7 @@ class _CreatePollModalState extends State<CreatePollModal> {
         }).toList(),
       );
 
-      widget.onPollCreated(newPoll);
-      Navigator.pop(context);
+      Navigator.pop(context, newPoll);
     }
   }
 
@@ -147,7 +145,10 @@ class _CreatePollModalState extends State<CreatePollModal> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryGreen,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -176,30 +177,45 @@ class _CreatePollModalState extends State<CreatePollModal> {
                       Expanded(
                         child: TextField(
                           controller: controller,
-                          style: const TextStyle(color: AppTheme.textDark, fontSize: 14),
+                          style: const TextStyle(
+                            color: AppTheme.textDark,
+                            fontSize: 14,
+                          ),
                           decoration: InputDecoration(
                             labelText: 'Option ${index + 1}',
-                            labelStyle: const TextStyle(color: AppTheme.textMuted),
+                            labelStyle: const TextStyle(
+                              color: AppTheme.textMuted,
+                            ),
                             filled: true,
                             fillColor: AppTheme.cardBackground,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                              borderSide: const BorderSide(
+                                color: AppTheme.primaryGreen,
+                                width: 2,
+                              ),
                             ),
                           ),
                         ),
                       ),
                       if (_optionControllers.length > 2)
                         IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            color: Colors.red,
+                          ),
                           onPressed: () => _removeOptionField(index),
                         ),
                     ],

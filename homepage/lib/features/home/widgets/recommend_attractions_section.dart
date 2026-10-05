@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../models/attraction.dart';
 import '../../../services/recommendation_service.dart';
 import 'attraction_card.dart';
@@ -16,7 +15,6 @@ class RecommendedAttractionsSection extends StatefulWidget {
 class _RecommendedAttractionsSectionState
     extends State<RecommendedAttractionsSection> {
   final RecommendationService _recommendationService = RecommendationService();
-  final Set<String> _favoriteIds = {};
   late Future<List<Attraction>> _attractionsFuture;
 
   @override
@@ -27,42 +25,34 @@ class _RecommendedAttractionsSectionState
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Attraction>>(
-      future: _attractionsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        final attractions = snapshot.data!;
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: attractions.length,
-          itemBuilder: (context, index) {
-            final attraction = attractions[index];
-            return AttractionCard(
-              title: attraction.title,
-              location: attraction.location,
-              imageUrl: attraction.imageUrl,
-              price: attraction.price,
-              tags: attraction.tags,
-              rating: attraction.rating,
-              isFavorite: _favoriteIds.contains(attraction.id),
-              onFavorite: () => setState(() {
-                if (!_favoriteIds.add(attraction.id)) {
-                  _favoriteIds.remove(attraction.id);
-                }
-              }),
+    return SizedBox(
+      height: 120,
+      child: FutureBuilder<List<Attraction>>(
+        future: _attractionsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
             );
-          },
-        );
-      },
+          }
+
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          final attractions = snapshot.data!;
+
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: attractions.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final attraction = attractions[index];
+              return AttractionCard.fromModel(attraction: attraction);
+            },
+          );
+        },
+      ),
     );
   }
 }

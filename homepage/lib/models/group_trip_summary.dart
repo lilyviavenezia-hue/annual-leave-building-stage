@@ -73,7 +73,7 @@ class GroupSuggestion {
   final String category;
   final int matchPercentage;
   final String imageUrl;
-  final bool isSaved;
+  bool isSaved;
 
   GroupSuggestion({
     required this.id,

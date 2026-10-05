@@ -7,6 +7,7 @@ class FoodOption {
   final String description;
   final double rating;
   final int reviewCount;
+  bool isFavourite;
 
   FoodOption({
     required this.id,
@@ -17,6 +18,7 @@ class FoodOption {
     required this.description,
     required this.rating,
     required this.reviewCount,
+    this.isFavourite = false,
   });
 
   factory FoodOption.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,9 @@ class FoodOption {
       description: json['description'] as String? ?? '',
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: json['review_count'] as int? ?? 0,
+      isFavourite: json['is_favourite'] as bool? ??
+          json['isFavourite'] as bool? ??
+          false,
     );
   }
 
@@ -42,6 +47,7 @@ class FoodOption {
       'description': description,
       'rating': rating,
       'review_count': reviewCount,
+      'is_favourite': isFavourite,
     };
   }
 }

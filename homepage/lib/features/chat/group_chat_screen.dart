@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../models/chat_message.dart';
 import '../../models/collaborator.dart';
+import '../../models/chat_message.dart';
+import '../../models/account_profile.dart';
 import '../../models/group_member.dart';
 import '../../models/group_poll.dart';
 import '../../models/group_trip_summary.dart';
+import '../../services/account_service.dart';
 import '../../services/group_chat_service.dart';
 import '../../services/group_summary_service.dart';
 import '../chat/trip_summary_screen.dart';
-import '../trip_planning/trip_collaborators_screen.dart';
 import 'widgets/chat_app_bar.dart';
 import 'widgets/chat_input_field.dart';
 import 'widgets/chat_message_bubble.dart';
@@ -20,6 +21,7 @@ import 'widgets/create_poll_modal.dart';
 import 'widgets/upload_file_modal.dart';
 import 'widgets/upload_media_modal.dart';
 import 'receipt_scanner_screen.dart';
+import '../trip_planning/trip_collaborators_screen.dart';
 
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
@@ -32,6 +34,7 @@ class GroupChatScreen extends StatefulWidget {
 
 class _GroupChatScreenState extends State<GroupChatScreen> {
   final GroupChatService _chatService = GroupChatService();
+  final AccountService _accountService = AccountService();
   final GroupSummaryService _summaryService = GroupSummaryService();
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -41,6 +44,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   List<ChatMessage> _messages = [];
   List<GroupPoll> _activePolls = [];
   List<GroupMember> _groupMembers = [];
+  AccountProfile? _currentUserProfile;
   GroupTripSummary? _tripSummary;
 
   bool _isLoading = true;
@@ -62,6 +66,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   Future<void> _loadChatData() async {
     final messages = await _chatService.getChatMessages(widget.groupId);
+    final currentUser = await _accountService.getCurrentUser();
     final polls = await _chatService.getActivePolls(widget.groupId);
     final summary = await _summaryService.getTripSummary(widget.groupId);
     final members = await _summaryService.getGroupMembers(widget.groupId);
@@ -69,6 +74,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (mounted) {
       setState(() {
         _messages = messages;
+        _currentUserProfile = currentUser;
         _activePolls = polls;
         _tripSummary = summary;
         _groupMembers = members;
@@ -90,47 +96,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     });
   }
 
-  Future<void> _addGroupMembers() async {
-    _scaffoldKey.currentState?.closeEndDrawer();
-    final existingMemberIds = _groupMembers.map((member) => member.id).toSet();
-    final selectedMembers = await Navigator.of(context)
-        .push<List<Collaborator>>(
-          MaterialPageRoute<List<Collaborator>>(
-            builder: (_) => TripCollaboratorsScreen(
-              startWithNoMembers: true,
-              returnSelectedMembers: true,
-              existingCollaboratorIds: existingMemberIds,
-              screenTitle: 'Add trip members',
-            ),
-          ),
-        );
-    if (!mounted || selectedMembers == null || selectedMembers.isEmpty) return;
-
-    final newMembers = selectedMembers
-        .where(
-          (collaborator) =>
-              !_groupMembers.any((member) => member.id == collaborator.id),
-        )
-        .map(
-          (collaborator) => GroupMember(
-            id: collaborator.id,
-            name: collaborator.name,
-            avatarUrl: collaborator.avatarUrl,
-            leaveBalanceSummary: '12 Days Available',
-          ),
-        )
-        .toList();
-    if (newMembers.isEmpty) return;
-    setState(() => _groupMembers.addAll(newMembers));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${newMembers.length} ${newMembers.length == 1 ? 'member' : 'members'} added to the trip.',
-        ),
-      ),
-    );
-  }
-
   Future<void> _handleSendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _isSending) return;
@@ -142,6 +107,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       groupId: widget.groupId,
       senderId: 'user_me',
       senderName: 'You',
+      senderAvatar: _currentUserProfile?.avatarUrl,
       text: text,
     );
 
@@ -176,10 +142,98 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       setState(() {
         final index = _activePolls.indexWhere((p) => p.id == pollId);
         if (index != -1) {
+          updatedPoll.isExpanded = _activePolls[index].isExpanded;
           _activePolls[index] = updatedPoll;
         }
       });
     }
+  }
+
+  Future<void> _addGroupMembers() async {
+    _scaffoldKey.currentState?.closeEndDrawer();
+    final existingMemberIds = _groupMembers.map((member) => member.id).toSet();
+    final selectedMembers = await Navigator.of(context)
+        .push<List<Collaborator>>(
+          MaterialPageRoute<List<Collaborator>>(
+            builder: (_) => TripCollaboratorsScreen(
+              startWithNoMembers: true,
+              returnSelectedMembers: true,
+              existingCollaboratorIds: existingMemberIds,
+              screenTitle: 'Add trip members',
+            ),
+          ),
+        );
+    if (!mounted || selectedMembers == null || selectedMembers.isEmpty) return;
+
+    final newMembers = selectedMembers
+        .where(
+          (collaborator) =>
+              !_groupMembers.any((member) => member.id == collaborator.id),
+        )
+        .map(
+          (collaborator) => GroupMember(
+            id: collaborator.id,
+            name: collaborator.name,
+            avatarUrl: collaborator.avatarUrl,
+            leaveBalanceSummary: '12 Days Available',
+          ),
+        )
+        .toList();
+    for (final member in newMembers) {
+      await _chatService.addGroupMember(member);
+    }
+    final updatedMembers = await _chatService.getGroupMembers(widget.groupId);
+    final updatedSummary = await _summaryService.getTripSummary(widget.groupId);
+    if (!mounted) return;
+
+    setState(() {
+      _groupMembers = updatedMembers;
+      _tripSummary = updatedSummary;
+    });
+  }
+
+  Future<void> _removeGroupMember(GroupMember member) async {
+    final shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove trip member?'),
+        content: Text('Remove ${member.name} from this trip?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (shouldRemove != true || !mounted) return;
+
+    final requesterId = _groupMembers
+        .where((groupMember) => groupMember.isMe)
+        .firstOrNull
+        ?.id;
+    if (requesterId == null) return;
+
+    final removed = await _chatService.removeGroupMember(
+      groupId: widget.groupId,
+      requesterId: requesterId,
+      memberId: member.id,
+    );
+    if (!removed || !mounted) return;
+
+    final members = await _chatService.getGroupMembers(widget.groupId);
+    final summary = await _summaryService.getTripSummary(widget.groupId);
+    final polls = await _chatService.getActivePolls(widget.groupId);
+    if (!mounted) return;
+    setState(() {
+      _groupMembers = members;
+      _tripSummary = summary;
+      _activePolls = polls;
+    });
   }
 
   void _navigateToTripSummary() {
@@ -252,16 +306,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => CreatePollModal(
-        onPollCreated: (poll) => Navigator.pop(context, poll),
-      ),
+      builder: (_) => const CreatePollModal(),
     );
 
     if (createdPoll == null || !mounted) return;
+    await _chatService.addPoll(widget.groupId, createdPoll);
+    final updatedPolls = await _chatService.getActivePolls(widget.groupId);
+    if (!mounted) return;
 
-    setState(() {
-      _activePolls.add(createdPoll);
-    });
+    setState(() => _activePolls = updatedPolls);
     _scrollToBottom();
   }
 
@@ -274,15 +327,62 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
+  List<_ChatTimelineItem> _buildTimelineItems() {
+    final messages = List<ChatMessage>.of(_messages)
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final items = <_ChatTimelineItem>[];
+    DateTime? previousDate;
+
+    for (final message in messages) {
+      final localTimestamp = message.timestamp.toLocal();
+      final messageDate = DateTime(
+        localTimestamp.year,
+        localTimestamp.month,
+        localTimestamp.day,
+      );
+      if (previousDate == null || !_isSameDate(previousDate, messageDate)) {
+        items.add(_ChatTimelineItem.date(messageDate));
+        previousDate = messageDate;
+      }
+      items.add(_ChatTimelineItem.message(message));
+    }
+    return items;
+  }
+
+  bool _isSameDate(DateTime first, DateTime second) =>
+      first.year == second.year &&
+      first.month == second.month &&
+      first.day == second.day;
+
+  String _formatDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (_isSameDate(date, today)) return 'Today';
+    if (_isSameDate(date, yesterday)) return 'Yesterday';
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = _tripSummary?.title ?? 'Group Chat';
-    final travelers =
-        _tripSummary?.confirmedDetails['Traveller'] ??
-        _tripSummary?.confirmedDetails['Travelers'];
-    final subtitle = travelers != null && travelers.isNotEmpty
-        ? '$travelers Live Sync'
-        : 'Live Sync';
+    final subtitle = '${_groupMembers.length} Friends Live Sync';
+    final timelineItems = _buildTimelineItems();
 
     return Scaffold(
       key: _scaffoldKey,
@@ -295,6 +395,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       endDrawer: GroupMembersDrawer(
         members: _groupMembers,
         onAddMemberPressed: _addGroupMembers,
+        onRemoveMember: _removeGroupMember,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -323,6 +424,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     if (_activePolls.isNotEmpty)
                       StickyPollsSection(
                         activePolls: _activePolls,
+                        members: _groupMembers,
                         onVote: _handleVote,
                       ),
 
@@ -330,10 +432,27 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       child: ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16.0),
-                        itemCount: _messages.length,
+                        itemCount: timelineItems.length,
                         itemBuilder: (context, index) {
+                          final item = timelineItems[index];
+                          if (item.date != null) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Center(
+                                child: Text(
+                                  _formatDateLabel(item.date!),
+                                  style: const TextStyle(
+                                    color: AppTheme.textMuted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
                           return ChatMessageBubble(
-                            message: _messages[index],
+                            message: item.message!,
+                            currentUserProfile: _currentUserProfile,
                             onAskAi: _handleAskAi,
                           );
                         },
@@ -354,4 +473,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             ),
     );
   }
+}
+
+class _ChatTimelineItem {
+  const _ChatTimelineItem.date(this.date) : message = null;
+  const _ChatTimelineItem.message(this.message) : date = null;
+
+  final DateTime? date;
+  final ChatMessage? message;
 }

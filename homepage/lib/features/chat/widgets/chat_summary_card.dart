@@ -34,11 +34,11 @@ class ChatSummaryCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
-        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        padding: const EdgeInsets.all(18.0),
+        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+        padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
@@ -53,10 +53,8 @@ class ChatSummaryCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Top Row: Title + Green Toggle Button Icon
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              runSpacing: 8,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Trip Summary',
@@ -71,8 +69,8 @@ class ChatSummaryCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
+                        horizontal: 10,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
                         color: isReady
@@ -94,7 +92,7 @@ class ChatSummaryCard extends StatelessWidget {
                           Text(
                             isReady ? 'Ready to plan' : 'In progress',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: isReady
                                   ? const Color(0xFF4CAF50)
@@ -130,7 +128,7 @@ class ChatSummaryCard extends StatelessWidget {
             ),
 
             if (isExpanded) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
 
               // Key Details Grid (DATES, DESTINATION, BUDGET)
               Row(
@@ -216,19 +214,19 @@ class ChatSummaryCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
               // Progress Bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
                   value: progressValue,
-                  minHeight: 10,
+                  minHeight: 7,
                   backgroundColor: const Color(0xFFE8F5E9),
                   color: const Color(0xFF66BB6A),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Completion Subtitle
               Text(

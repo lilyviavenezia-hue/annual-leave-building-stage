@@ -8,16 +8,25 @@ class MemberListTile extends StatelessWidget {
   final GroupMember member;
   final bool isExpanded;
   final VoidCallback onToggleExpand;
+  final VoidCallback? onRemoveMember;
 
   const MemberListTile({
     super.key,
     required this.member,
     required this.isExpanded,
     required this.onToggleExpand,
+    this.onRemoveMember,
   });
 
   @override
   Widget build(BuildContext context) {
+    final avatarUrl = member.avatarUrl;
+    final ImageProvider? avatarImage = avatarUrl == null
+        ? null
+        : avatarUrl.startsWith('assets/')
+        ? AssetImage(avatarUrl)
+        : NetworkImage(avatarUrl);
+
     return Column(
       children: [
         ListTile(
@@ -28,18 +37,16 @@ class MemberListTile extends StatelessWidget {
           leading: CircleAvatar(
             radius: 22,
             backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.12),
-            child: member.avatarUrl == null
-                ? _MemberInitial(name: member.name)
-                : ClipOval(
-                    child: Image.network(
-                      member.avatarUrl!,
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          _MemberInitial(name: member.name),
+            backgroundImage: avatarImage,
+            child: avatarUrl == null
+                ? Text(
+                    member.name.isNotEmpty ? member.name[0] : '',
+                    style: const TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ),
+                  )
+                : null,
           ),
           title: Text(
             member.name,
@@ -49,20 +56,26 @@ class MemberListTile extends StatelessWidget {
               color: AppTheme.textDark,
             ),
           ),
+          trailing: onRemoveMember == null
+              ? null
+              : IconButton(
+                  tooltip: 'Remove member',
+                  onPressed: onRemoveMember,
+                  icon: const Icon(
+                    Icons.person_remove_outlined,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
           subtitle: GestureDetector(
             onTap: onToggleExpand,
             child: Row(
               children: [
-                const Flexible(
-                  child: Text(
-                    'View Preferences',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primaryGreen,
-                    ),
+                const Text(
+                  'View Preferences',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryGreen,
                   ),
                 ),
                 const SizedBox(width: 2),
@@ -70,7 +83,7 @@ class MemberListTile extends StatelessWidget {
                   isExpanded
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down,
-                  size: 14,
+                  size: 16,
                   color: AppTheme.primaryGreen,
                 ),
               ],
@@ -90,19 +103,4 @@ class MemberListTile extends StatelessWidget {
       ],
     );
   }
-}
-
-class _MemberInitial extends StatelessWidget {
-  const _MemberInitial({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    name.isNotEmpty ? name[0] : '',
-    style: const TextStyle(
-      color: AppTheme.primaryGreen,
-      fontWeight: FontWeight.bold,
-    ),
-  );
 }

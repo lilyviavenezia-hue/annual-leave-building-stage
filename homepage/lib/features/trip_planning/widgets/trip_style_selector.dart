@@ -20,7 +20,7 @@ class TripStyleSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (showTitle) ...[
+        if (showTitle)
           const Text(
             'Trip style',
             style: TextStyle(
@@ -29,8 +29,7 @@ class TripStyleSelector extends StatelessWidget {
               color: AppTheme.textDark,
             ),
           ),
-          const SizedBox(height: 12),
-        ],
+        if (showTitle) const SizedBox(height: 12),
         Row(
           children: [
             _buildChip(

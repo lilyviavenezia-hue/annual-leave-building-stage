@@ -144,18 +144,20 @@ class _TripCollaboratorsScreenState extends State<TripCollaboratorsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TripStyleSelector(
-                    isSoloSelected: _isSoloSelected,
-                    showTitle: false,
-                    onSelectSolo: () {
-                      setState(() => _isSoloSelected = true);
-                      Navigator.of(context).maybePop();
-                    },
-                    onSelectGroup: () {
-                      setState(() => _isSoloSelected = false);
-                    },
-                  ),
-                  const SizedBox(height: 20),
+                  if (!widget.returnSelectedMembers) ...[
+                    TripStyleSelector(
+                      isSoloSelected: _isSoloSelected,
+                      showTitle: false,
+                      onSelectSolo: () {
+                        setState(() => _isSoloSelected = true);
+                        Navigator.of(context).maybePop();
+                      },
+                      onSelectGroup: () {
+                        setState(() => _isSoloSelected = false);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   const Text(
                     'Collaborators',

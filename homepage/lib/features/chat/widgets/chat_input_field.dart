@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../core/theme/app_theme.dart';
 
 class ChatInputField extends StatefulWidget {
@@ -50,10 +49,7 @@ class _ChatInputFieldState extends State<ChatInputField> {
             child: SingleChildScrollView(
               physics: const NeverScrollableScrollPhysics(),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -128,11 +124,13 @@ class _ChatInputFieldState extends State<ChatInputField> {
                     ],
                   ),
                   child: AnimatedRotation(
-                    turns: _showAttachmentMenu
-                        ? 0.125
-                        : 0.0, // Rotates to 'X' when open
+                    turns: _showAttachmentMenu ? 0.125 : 0.0, // Rotates to 'X' when open
                     duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.add, color: Colors.white, size: 26),
+                    child: const Icon(
+                      Icons.add,
+                      color: Colors.white,
+                      size: 26,
+                    ),
                   ),
                 ),
               ),
@@ -142,8 +140,6 @@ class _ChatInputFieldState extends State<ChatInputField> {
               Expanded(
                 child: TextField(
                   controller: widget.controller,
-                  autofocus: true,
-                  textInputAction: TextInputAction.send,
                   decoration: InputDecoration(
                     hintText: 'Type a message...',
                     hintStyle: const TextStyle(

@@ -37,6 +37,7 @@ dependencies:
   go_router: ^18.0.1
   image_picker: ^1.2.1
   url_launcher: ^6.3.3
+  file_picker: ^13.1.0
 
 dev_dependencies:
   flutter_test:

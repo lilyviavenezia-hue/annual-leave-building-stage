@@ -1,3 +1,5 @@
+import 'mock_collaborators.dart';
+
 final List<Map<String, dynamic>> mockGroupSuggestionsData = [
   {
     "id": "sug_1",
@@ -6,7 +8,7 @@ final List<Map<String, dynamic>> mockGroupSuggestionsData = [
     "category": "GROUP MATCH",
     "matchPercentage": 94,
     "imageUrl": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80",
-    "isSaved": true
+    "isSaved": false,
   },
   {
     "id": "sug_2",
@@ -15,7 +17,7 @@ final List<Map<String, dynamic>> mockGroupSuggestionsData = [
     "category": "GROUP MATCH",
     "matchPercentage": 88,
     "imageUrl": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=600&q=80",
-    "isSaved": true
+    "isSaved": false,
   },
   {
     "id": "sug_3",
@@ -24,7 +26,7 @@ final List<Map<String, dynamic>> mockGroupSuggestionsData = [
     "category": "FOOD • NIGHTLIFE",
     "matchPercentage": 82,
     "imageUrl": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80",
-    "isSaved": false
+    "isSaved": false,
   },
   {
     "id": "sug_4",
@@ -33,8 +35,8 @@ final List<Map<String, dynamic>> mockGroupSuggestionsData = [
     "category": "GROUP MATCH",
     "matchPercentage": 91,
     "imageUrl": "https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=600&q=80",
-    "isSaved": true
-  }
+    "isSaved": false,
+  },
 ];
 
 final Map<String, dynamic> mockTripSummaryData = {
@@ -42,26 +44,25 @@ final Map<String, dynamic> mockTripSummaryData = {
   "title": "Kyoto Itinerary",
   "dates": "Jan 12 - Jan 18, 2026",
   "destination": "Kyoto, Japan",
-  "budget": "RM1000",
+  "budget": "RM1,000 - RM5,000",
   "progress": 0.71,
   "completedItems": 5,
   "totalItems": 7,
-  "pendingDecisions": ["Budget", "Accommodation", "Transport"],
+  "pendingDecisions": ["Accommodation", "Transport"],
   "confirmedDetails": {
     "Destination": "Kyoto, Japan",
     "Dates": "Jan 12 - 18",
-    "Traveller": "8 Friends",
     "Duration": "7 days",
-    "Budget": "RM1000"
+    "Budget": "RM1,000 - RM5,000",
   },
   "preferenceTags": [
     "5-star hotel",
     "no seafood",
     "prefers transit",
     "high-efficiency pace",
-    "low-crowd spaces"
+    "low-crowd spaces",
   ],
-  "isReadyToPlan": true
+  "isReadyToPlan": true,
 };
 
 final List<Map<String, dynamic>> mockGroupMembersData = [
@@ -69,36 +70,56 @@ final List<Map<String, dynamic>> mockGroupMembersData = [
     "id": "user_me",
     "name": "Ying (You)",
     "role": "Host",
-    "avatarUrl": "https://i.pravatar.cc/150?img=5",
+    "avatarUrl": "assets/avatars/blue-hamster.jpg",
     "preferences": ["Morning start", "Local street food", "No fast pace"],
     "leaveBalanceSummary": "14 Days Available",
     "minBudget": 1000.0,
     "maxBudget": 5000.0,
     "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": true
+    "isMe": true,
   },
   {
-    "id": "collab_2",
-    "name": "Alex Wong",
+    ...mockCollaboratorsList[0],
     "role": "Member",
-    "avatarUrl": "https://i.pravatar.cc/150?img=2",
+    "avatarUrl": mockCollaboratorsList[0]["avatarUrl"],
+    "preferences": ["Local culture", "Food markets"],
+    "leaveBalanceSummary": "9 Days Available",
+    "minBudget": 1200.0,
+    "maxBudget": 4500.0,
+    "dateRange": "Jun 12 - Jun 18, 2026",
+    "isMe": false,
+  },
+  {
+    ...mockCollaboratorsList[1],
+    "role": "Member",
+    "avatarUrl": mockCollaboratorsList[1]["avatarUrl"],
     "preferences": ["Avoid crowded spots", "City photography"],
     "leaveBalanceSummary": "8 Days Available",
     "minBudget": 1500.0,
     "maxBudget": 4000.0,
     "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false
+    "isMe": false,
   },
   {
-    "id": "collab_3",
-    "name": "Ving Ang",
+    ...mockCollaboratorsList[2],
     "role": "Member",
-    "avatarUrl": "https://i.pravatar.cc/150?img=3",
+    "avatarUrl": mockCollaboratorsList[2]["avatarUrl"],
     "preferences": ["Anime & Museums", "Ramen hunting"],
     "leaveBalanceSummary": "10 Days Available",
     "minBudget": 2000.0,
     "maxBudget": 6000.0,
     "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false
-  }
+    "isMe": false,
+  },
+  {
+    ...mockCollaboratorsList[3],
+    "role": "Member",
+    "avatarUrl": mockCollaboratorsList[3]["avatarUrl"],
+    "preferences": ["Nature walks", "Photography"],
+    "leaveBalanceSummary": "11 Days Available",
+    "minBudget": 1800.0,
+    "maxBudget": 5200.0,
+    "dateRange": "Jun 12 - Jun 18, 2026",
+    "isMe": false,
+  },
 ];

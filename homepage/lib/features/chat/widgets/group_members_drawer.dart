@@ -7,11 +7,13 @@ import 'member_list_tile.dart';
 class GroupMembersDrawer extends StatefulWidget {
   final List<GroupMember> members;
   final VoidCallback? onAddMemberPressed;
+  final ValueChanged<GroupMember>? onRemoveMember;
 
   const GroupMembersDrawer({
     super.key,
     required this.members,
     this.onAddMemberPressed,
+    this.onRemoveMember,
   });
 
   @override
@@ -22,14 +24,11 @@ class _GroupMembersDrawerState extends State<GroupMembersDrawer> {
   String? _expandedMemberId;
 
   @override
-  void initState() {
-    super.initState();
-    final ownMembers = widget.members.where((member) => member.isMe);
-    _expandedMemberId = ownMembers.isEmpty ? null : ownMembers.first.id;
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final isHost = widget.members.any(
+      (member) => member.isMe && member.role == 'Host',
+    );
+
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
@@ -43,19 +42,17 @@ class _GroupMembersDrawerState extends State<GroupMembersDrawer> {
                 vertical: 16.0,
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
-                    child: Text(
-                      'Trip Members',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textDark,
-                        letterSpacing: -0.5,
-                      ),
+                  const Text(
+                    'Trip Members',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textDark,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(width: 8),
                   Container(
                     width: 36,
                     height: 36,
@@ -90,6 +87,9 @@ class _GroupMembersDrawerState extends State<GroupMembersDrawer> {
                   return MemberListTile(
                     member: member,
                     isExpanded: isExpanded,
+                    onRemoveMember: isHost && !member.isMe
+                        ? () => widget.onRemoveMember?.call(member)
+                        : null,
                     onToggleExpand: () {
                       setState(() {
                         _expandedMemberId = isExpanded ? null : member.id;
