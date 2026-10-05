@@ -5,8 +5,13 @@ import '../../services/expense_service.dart';
 
 class ScannedReceiptScreen extends StatefulWidget {
   final String groupId;
+  final Receipt? initialReceipt;
 
-  const ScannedReceiptScreen({super.key, required this.groupId});
+  const ScannedReceiptScreen({
+    super.key,
+    required this.groupId,
+    this.initialReceipt,
+  });
 
   @override
   State<ScannedReceiptScreen> createState() => _ScannedReceiptScreenState();
@@ -24,7 +29,8 @@ class _ScannedReceiptScreenState extends State<ScannedReceiptScreen> {
   }
 
   Future<void> _loadReceipt() async {
-    final receipt = await _expenseService.getScannedReceipt();
+    final receipt =
+        widget.initialReceipt ?? await _expenseService.getScannedReceipt();
     if (mounted) {
       setState(() {
         _receipt = receipt;
@@ -99,26 +105,32 @@ class _ScannedReceiptScreenState extends State<ScannedReceiptScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _receipt!.merchantName,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppTheme.textDark,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _receipt!.merchantName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.textDark,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _receipt!.timestamp,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textMuted,
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _receipt!.timestamp,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textMuted,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               Container(
                                 padding: const EdgeInsets.all(8),
@@ -152,20 +164,29 @@ class _ScannedReceiptScreenState extends State<ScannedReceiptScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            item.title,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: AppTheme.textDark,
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                item.title,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color: AppTheme.textDark,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          const Icon(Icons.edit_outlined,
-                                              size: 14, color: AppTheme.textMuted),
-                                        ],
+                                            const SizedBox(width: 4),
+                                            const Icon(
+                                              Icons.edit_outlined,
+                                              size: 14,
+                                              color: AppTheme.textMuted,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                       Row(
                                         children: [
@@ -173,7 +194,7 @@ class _ScannedReceiptScreenState extends State<ScannedReceiptScreen> {
                                             'RM ${itemTotal.toStringAsFixed(2)}',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w800,
-                                              fontSize: 16,
+                                              fontSize: 14,
                                               color: AppTheme.textDark,
                                             ),
                                           ),

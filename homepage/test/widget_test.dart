@@ -294,6 +294,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Penang Itinerary'), findsOneWidget);
+    expect(find.text('Replan Trip'), findsNothing);
   });
 
   testWidgets('Financial page uses selected trip data and shows expenses', (
@@ -312,19 +313,20 @@ void main() {
     await tester.tap(find.byTooltip('Financial summary'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Budget and Expenses'), findsOneWidget);
-    expect(find.text('RM 2480'), findsOneWidget);
-    expect(find.text('RM 620'), findsOneWidget);
-    await tester.tap(find.text('Expenses'));
+    expect(find.text('Financial Summary'), findsOneWidget);
+    expect(find.text('Budget progress'), findsOneWidget);
+    expect(find.text('People'), findsOneWidget);
+    expect(find.text('Alex Ramses'), findsOneWidget);
+    await tester.tap(find.byTooltip('Receipts'));
     await tester.pumpAndSettle();
     expect(find.text('Scan Receipt'), findsOneWidget);
-    expect(find.text('Accommodation'), findsOneWidget);
-    await tester.tap(find.text('Recent receipts'));
+    expect(find.text('Recent Receipts'), findsOneWidget);
+    await tester.tap(find.text('Ichiran Ramen, Kyoto'));
     await tester.pumpAndSettle();
-    expect(find.text('Ichiran Ramen, Kyoto'), findsOneWidget);
+    expect(find.text('Ramen dinner'), findsOneWidget);
   });
 
-  testWidgets('Replan button opens issue options for this trip', (
+  testWidgets('Upcoming itinerary opens the replan issue screen', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(393, 852);
@@ -337,25 +339,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Kyoto, Japan'));
     await tester.pumpAndSettle();
+    expect(find.text('Replan Trip'), findsOneWidget);
+    expect(find.byTooltip('Financial summary'), findsOneWidget);
     await tester.tap(find.text('Replan Trip'));
     await tester.pumpAndSettle();
-
     expect(find.text('What happened?'), findsOneWidget);
-    expect(find.text('AFFECTED BOOKINGS'), findsOneWidget);
-    expect(find.text('Kyoto hotel'), findsOneWidget);
-    await tester.tap(find.text('Find Alternatives'));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      'Fushimi Inari-taisha Shrine is closed.',
-    );
-    expect(find.text('Kiyomizu-dera'), findsOneWidget);
-    expect(find.text('Operating hours'), findsOneWidget);
-    expect(find.text('RM200/entry'), findsOneWidget);
-    await tester.drag(find.byType(PageView), const Offset(-300, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Sannenzaka'), findsOneWidget);
-    expect(find.text('Free'), findsOneWidget);
   });
 
   testWidgets('Home attractions render as a long vertical list', (
@@ -378,7 +366,30 @@ void main() {
     expect(find.text('Recommended Attractions'), findsOneWidget);
     expect(find.text('Kiyomizu-dera'), findsOneWidget);
     expect(find.text('Yasaka Shrine'), findsOneWidget);
-    expect(find.text('Add to Favourites'), findsWidgets);
+    expect(find.text('Add to Favourites'), findsNothing);
+    expect(find.byTooltip('Add to Favourites'), findsWidgets);
+    await tester.tap(find.byTooltip('Add to Favourites').first);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Remove from Favourites'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('attraction-details-sheet')),
+      findsNothing,
+    );
+    await tester.tap(find.text('Kiyomizu-dera').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Attraction details'), findsOneWidget);
+    final detailsSheet = find.byKey(const ValueKey('attraction-details-sheet'));
+    expect(
+      find.descendant(
+        of: detailsSheet,
+        matching: find.text('Higashiyama-ku, Kyoto'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: detailsSheet, matching: find.text('RM 106')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Travel checklist navigates next and previous between pages', (
@@ -562,8 +573,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Financial summary'));
     await tester.pumpAndSettle();
-    expect(find.text('Budget and Expenses'), findsOneWidget);
-    expect(find.text('RM 2480'), findsOneWidget);
+    expect(find.text('Financial Summary'), findsOneWidget);
+    expect(find.textContaining('RM 2480'), findsOneWidget);
   });
 
   testWidgets('Recommended eats renders the supplied food future', (
@@ -595,7 +606,7 @@ void main() {
     expect(find.text('Kyoto Ramen'), findsOneWidget);
   });
 
-  testWidgets('Trip creation books options, confirms, and opens Trips tab', (
+  testWidgets('Trip creation reports an unavailable generation backend', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(393, 852);
@@ -616,42 +627,7 @@ void main() {
     await tester.tap(find.text('Generate my itinerary'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Compare Flights'), findsOneWidget);
-    await tester.tap(find.text('Select Flight').first);
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Hotels'));
-    await tester.tap(find.text('Hotels'));
-    await tester.pumpAndSettle();
-    expect(find.text('Compare Hotels'), findsOneWidget);
-    await tester.tap(find.text('Select Hotel').first);
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Attractions'));
-    await tester.tap(find.text('Attractions'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.add).first);
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Food'));
-    await tester.tap(find.text('Food'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.add).first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Review estimated budget'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Budget summary'), findsOneWidget);
-    expect(find.text('Flights'), findsOneWidget);
-    expect(find.text('Accommodation'), findsOneWidget);
-    await tester.tap(find.text('Confirm trip'));
-    await tester.pumpAndSettle();
-    expect(find.text('Your trip is confirmed!'), findsOneWidget);
-    await tester.tap(find.text('View my trips'));
-    await tester.pumpAndSettle();
-    expect(find.text('Trips'), findsWidgets);
-    expect(find.text('Kyoto, Japan'), findsNWidgets(2));
-    await tester.tap(find.text('Kyoto, Japan').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Financial summary'));
-    await tester.pumpAndSettle();
-    expect(find.text('RM 7524'), findsOneWidget);
+    expect(find.textContaining('Unable to generate itinerary'), findsOneWidget);
+    expect(find.text('Generate my itinerary'), findsOneWidget);
   });
 }

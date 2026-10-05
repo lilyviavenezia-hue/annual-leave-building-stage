@@ -3,10 +3,19 @@ import '../models/itinerary.dart';
 import '../models/trip.dart';
 
 class ItineraryService {
+  static final Map<String, GeneratedItinerary> _generatedItineraries = {};
+
+  static void saveGeneratedItinerary(GeneratedItinerary itinerary) {
+    _generatedItineraries[itinerary.overview.id] = itinerary;
+  }
+
   Future<ItineraryOverview> getItineraryOverview(
     String itineraryId, {
     Trip? trip,
   }) async {
+    final generated = _generatedItineraries[itineraryId];
+    if (generated != null) return generated.overview;
+
     await Future.delayed(const Duration(milliseconds: 300));
     if (trip != null && itineraryId != 'ITIN_KYOTO_2026') {
       final durationDays = int.tryParse(trip.duration.split(' ').first) ?? 1;
@@ -35,6 +44,11 @@ class ItineraryService {
     String itineraryId,
     int dayNumber,
   ) async {
+    final generated = _generatedItineraries[itineraryId];
+    if (generated != null) {
+      return generated.dayDetails[dayNumber] ?? const <ItineraryDetailItem>[];
+    }
+
     // Simulates future backend response latency
     await Future.delayed(const Duration(milliseconds: 300));
 

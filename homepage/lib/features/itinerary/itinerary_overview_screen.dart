@@ -6,8 +6,11 @@ import '../../core/theme/app_theme.dart';
 import '../../models/attraction.dart';
 import '../../models/itinerary.dart';
 import '../../models/trip.dart';
+import '../../models/trip_booking.dart';
 import '../../services/itinerary_service.dart';
 import '../../services/recommendation_service.dart';
+import '../../services/trip_booking_service.dart';
+import '../trip_planning/trip_booking_flow_screen.dart';
 import 'widgets/itinerary_daycards.dart';
 import 'widgets/itinerary_side_panel.dart';
 import 'widgets/itinerary_calendar_view.dart';
@@ -18,12 +21,14 @@ class ItineraryOverviewScreen extends StatefulWidget {
   final String itineraryId;
   final int initialDayIndex;
   final Trip? initialTrip;
+  final GeneratedItinerary? generatedItinerary;
 
   const ItineraryOverviewScreen({
     super.key,
     required this.itineraryId,
     this.initialDayIndex = 0,
     this.initialTrip,
+    this.generatedItinerary,
   });
 
   @override
@@ -34,6 +39,8 @@ class ItineraryOverviewScreen extends StatefulWidget {
 class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
   final ItineraryService _itineraryService = ItineraryService();
   final RecommendationService _recommendationService = RecommendationService();
+  final TripBookingService _bookingService = TripBookingService();
+  bool _openingBudget = false;
 
   late Future<ItineraryOverview> _itineraryFuture;
   late Future<List<ItineraryDetailItem>> _dayItemsFuture;
@@ -52,12 +59,13 @@ class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
     _panelState = widget.initialDayIndex > 0
         ? PanelState.peek
         : PanelState.hidden;
-    _itineraryFuture = _itineraryService.getItineraryOverview(
-      widget.itineraryId,
-      trip: widget.initialTrip,
-    );
-    _dayItemsFuture = _itineraryService.getDayDetailItems(
-      widget.itineraryId,
+    _itineraryFuture = widget.generatedItinerary == null
+        ? _itineraryService.getItineraryOverview(
+            widget.itineraryId,
+            trip: widget.initialTrip,
+          )
+        : Future.value(widget.generatedItinerary!.overview);
+    _dayItemsFuture = _loadDayItems(
       widget.initialDayIndex > 0 ? widget.initialDayIndex : 1,
     );
     _attractionsFuture = _recommendationService.getRecommendedAttractions();
@@ -68,15 +76,22 @@ class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
     setState(() {
       _selectedTabIndex = index;
       if (index > 0) {
-        _dayItemsFuture = _itineraryService.getDayDetailItems(
-          widget.itineraryId,
-          index,
-        );
+        _dayItemsFuture = _loadDayItems(index);
         _panelState = PanelState.peek;
       } else {
         _panelState = PanelState.hidden;
       }
     });
+  }
+
+  Future<List<ItineraryDetailItem>> _loadDayItems(int dayNumber) {
+    final generated = widget.generatedItinerary;
+    if (generated != null) {
+      return Future.value(
+        generated.dayDetails[dayNumber] ?? const <ItineraryDetailItem>[],
+      );
+    }
+    return _itineraryService.getDayDetailItems(widget.itineraryId, dayNumber);
   }
 
   @override
@@ -114,7 +129,7 @@ class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
                       const SizedBox(height: 16),
                       _buildFilterTabs(data.durationDays),
                       const SizedBox(height: 12),
-                      _buildTripActions(),
+                      _buildTripActions(data),
                       const SizedBox(height: 16),
                       Expanded(
                         child: _selectedTabIndex == 0
@@ -226,33 +241,72 @@ class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
     );
   }
 
-  Widget _buildTripActions() {
+  Widget _buildTripActions(ItineraryOverview data) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Expanded(
-            child: SizedBox(
-              height: 42,
-              child: ElevatedButton.icon(
-                onPressed: _replanTrip,
-                icon: const Icon(Icons.refresh, size: 17),
-                label: const Text(
-                  'Replan Trip',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF1010),
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+          if (widget.initialTrip?.status.toLowerCase() == 'upcoming') ...[
+            Expanded(
+              child: SizedBox(
+                height: 42,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          ReplanIssueScreen(destination: data.destination),
+                    ),
+                  ),
+                  icon: const Icon(Icons.refresh, size: 17),
+                  label: const Text(
+                    'Replan Trip',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF1010),
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
+            const SizedBox(width: 10),
+          ],
+          if (widget.initialTrip?.status == 'draft') ...[
+            Expanded(
+              child: SizedBox(
+                height: 42,
+                child: ElevatedButton.icon(
+                  onPressed: _openingBudget ? null : _proceedToBudget,
+                  icon: _openingBudget
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 17,
+                        ),
+                  label: const Text('Proceed to budget'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
           Material(
             color: AppTheme.primaryGreen,
             borderRadius: BorderRadius.circular(14),
@@ -276,14 +330,33 @@ class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
     );
   }
 
-  void _replanTrip() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ReplanIssueScreen(
-          destination: widget.initialTrip?.destination ?? 'Kyoto, Japan',
+  Future<void> _proceedToBudget() async {
+    final trip = widget.initialTrip;
+    if (trip == null || _openingBudget) return;
+
+    setState(() => _openingBudget = true);
+    try {
+      final options = await _bookingService.getOptions(trip);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => TripBookingBudgetScreen(
+            trip: trip,
+            options: options,
+            selection: const TripBookingSelection(),
+            bookingService: _bookingService,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to open trip budget: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _openingBudget = false);
+    }
   }
 
   Widget _buildFilterTabs(int totalDays) {

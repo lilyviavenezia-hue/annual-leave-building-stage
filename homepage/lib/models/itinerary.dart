@@ -219,3 +219,106 @@ class ItineraryDetailItem {
     }
   }
 }
+
+class GeneratedItinerary {
+  const GeneratedItinerary({
+    required this.overview,
+    required this.dayDetails,
+    this.estimatedBudget,
+    this.budgetBreakdown,
+  });
+
+  final ItineraryOverview overview;
+  final Map<int, List<ItineraryDetailItem>> dayDetails;
+  final double? estimatedBudget;
+  final Map<String, double>? budgetBreakdown;
+
+  factory GeneratedItinerary.fromJson(Map<String, dynamic> json) {
+    final itineraryJson = json['itinerary'];
+    final detailsJson = json['day_details'];
+    if (itineraryJson is! Map<String, dynamic> ||
+        detailsJson is! Map<String, dynamic>) {
+      throw const FormatException(
+        'The generated itinerary response must contain itinerary and day_details objects.',
+      );
+    }
+
+    final overview = ItineraryOverview.fromJson(itineraryJson);
+    if (overview.id.isEmpty ||
+        overview.title.isEmpty ||
+        overview.destination.isEmpty ||
+        overview.days.isEmpty ||
+        overview.durationDays != overview.days.length) {
+      throw const FormatException(
+        'The generated itinerary is missing its identity or a complete daily plan.',
+      );
+    }
+
+    final dayDetails = <int, List<ItineraryDetailItem>>{};
+    for (final entry in detailsJson.entries) {
+      final dayNumber = int.tryParse(entry.key);
+      final rawItems = entry.value;
+      if (dayNumber == null || rawItems is! List) {
+        throw const FormatException(
+          'Each day_details key must be a day number and its value must be a list.',
+        );
+      }
+      dayDetails[dayNumber] = rawItems.map((rawItem) {
+        if (rawItem is! Map<String, dynamic>) {
+          throw const FormatException(
+            'Each generated itinerary activity must be a JSON object.',
+          );
+        }
+        final item = ItineraryDetailItem.fromJson(rawItem);
+        if (item.id.isEmpty || item.title.isEmpty) {
+          throw const FormatException(
+            'Each generated itinerary activity must have an id and title.',
+          );
+        }
+        return item;
+      }).toList();
+    }
+
+    for (var index = 0; index < overview.days.length; index++) {
+      final day = overview.days[index];
+      if (day.dayNumber != index + 1 ||
+          day.dateString.isEmpty ||
+          day.location.isEmpty ||
+          day.stops.isEmpty ||
+          (dayDetails[day.dayNumber]?.isEmpty ?? true)) {
+        throw FormatException(
+          'The generated itinerary must include valid overview and activity data for day ${index + 1}.',
+        );
+      }
+    }
+
+    final rawEstimatedBudget = json['estimated_budget'];
+    final rawBreakdown = json['budget_breakdown'];
+    if (rawEstimatedBudget != null && rawEstimatedBudget is! num) {
+      throw const FormatException('estimated_budget must be a number.');
+    }
+    if (rawBreakdown != null && rawBreakdown is! Map) {
+      throw const FormatException('budget_breakdown must be an object.');
+    }
+    if (rawBreakdown is Map &&
+        rawBreakdown.values.any((value) => value is! num)) {
+      throw const FormatException(
+        'Each budget_breakdown amount must be a number.',
+      );
+    }
+    return GeneratedItinerary(
+      overview: overview,
+      dayDetails: dayDetails,
+      estimatedBudget: rawEstimatedBudget is num
+          ? rawEstimatedBudget.toDouble()
+          : null,
+      budgetBreakdown: rawBreakdown is Map
+          ? {
+              for (final entry in rawBreakdown.entries)
+                if (entry.value is num)
+                  entry.key.toString(): (entry.value as num).toDouble(),
+            }
+          : null,
+    );
+  }
+}
