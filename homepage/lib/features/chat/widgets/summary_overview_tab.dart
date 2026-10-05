@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../models/attraction.dart';
-import '../../../models/food_option.dart';
-import '../../../models/group_trip_summary.dart';
-import '../../../models/hotel.dart';
-import '../../../services/food_service.dart';
-import '../../../services/hotel_service.dart';
-import '../../../services/recommendation_service.dart';
 
-class SummaryOverviewTab extends StatefulWidget {
+import '../../../../core/theme/app_theme.dart';
+import '../../../models/group_trip_summary.dart';
+
+class SummaryOverviewTab extends StatelessWidget {
   final GroupTripSummary tripSummary;
   final VoidCallback onSelectPendingDecision;
   final VoidCallback onTagsUpdated;
@@ -22,130 +17,47 @@ class SummaryOverviewTab extends StatefulWidget {
     required this.onConfirmedDetailUpdated,
   });
 
-  @override
-  State<SummaryOverviewTab> createState() => _SummaryOverviewTabState();
-}
-
-class _SummaryOverviewTabState extends State<SummaryOverviewTab> {
-  final RecommendationService _recommendationService = RecommendationService();
-  final FoodService _foodService = FoodService();
-  final HotelService _hotelService = HotelService();
-
-  late Future<List<Attraction>> _attractionsFuture;
-  late Future<List<FoodOption>> _foodFuture;
-  late Future<List<HotelOption>> _hotelsFuture;
-
-  final Set<String> _favoriteAttractionIds = {};
-  final Set<String> _favoriteFoodIds = {};
-  final Set<String> _favoriteHotelIds = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFavouriteData();
-  }
-
-  void _loadFavouriteData() {
-    final destination = widget.tripSummary.destination.split(',').first.trim();
-    _attractionsFuture = _recommendationService.getRecommendedAttractions();
-    _foodFuture = _foodService.getRecommendedEats(destination.isNotEmpty ? destination : 'Kyoto');
-    _hotelsFuture = _hotelService.searchHotels(destination.isNotEmpty ? destination : 'Kyoto');
-  }
-
   IconData _getCategoryIcon(String key) {
     final lowerKey = key.toLowerCase();
-    if (lowerKey.contains('budget')) return Icons.help_outline;
-    if (lowerKey.contains('accommodation')) return Icons.hotel_outlined;
+    if (lowerKey.contains('budget')) return Icons.account_balance_wallet_outlined;
+    if (lowerKey.contains('accommodation') || lowerKey.contains('hotel')) {
+      return Icons.hotel_outlined;
+    }
+    if (lowerKey.contains('flight')) return Icons.flight_takeoff_outlined;
     if (lowerKey.contains('destination')) return Icons.location_on_outlined;
     if (lowerKey.contains('date')) return Icons.calendar_today_outlined;
+    if (lowerKey.contains('duration')) return Icons.schedule_outlined;
     if (lowerKey.contains('transport')) return Icons.directions_bus_outlined;
-    if (lowerKey.contains('friend') || lowerKey.contains('traveller') || lowerKey.contains('traveler')) {
+    if (lowerKey.contains('friend') ||
+        lowerKey.contains('traveller') ||
+        lowerKey.contains('traveler')) {
       return Icons.people_outline;
     }
     return Icons.check_circle_outline;
   }
 
-  void _toggleFavorite(String category, String id) {
-    setState(() {
-      switch (category) {
-        case 'Attractions':
-          _favoriteAttractionIds.contains(id)
-              ? _favoriteAttractionIds.remove(id)
-              : _favoriteAttractionIds.add(id);
-        case 'Restaurants':
-          _favoriteFoodIds.contains(id)
-              ? _favoriteFoodIds.remove(id)
-              : _favoriteFoodIds.add(id);
-        case 'Stays':
-          _favoriteHotelIds.contains(id)
-              ? _favoriteHotelIds.remove(id)
-              : _favoriteHotelIds.add(id);
-      }
-    });
+  String _budgetKey(GroupTripSummary summary) {
+    for (final key in summary.confirmedDetails.keys) {
+      if (key.toLowerCase().contains('budget')) return key;
+    }
+    return 'Budget';
   }
 
-  String _formatRangeLabel(DateTimeRange range) {
-    final monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-
-    final start = range.start;
-    final end = range.end;
-    final startText = '${monthNames[start.month - 1]} ${start.day}';
-    final endText = '${monthNames[end.month - 1]} ${end.day}';
-    return '$startText - $endText, ${end.year}';
+  String _budgetValue(GroupTripSummary summary) {
+    for (final entry in summary.confirmedDetails.entries) {
+      if (entry.key.toLowerCase().contains('budget')) return entry.value;
+    }
+    return summary.budget;
   }
 
-  Future<void> _showDateEditSheet(BuildContext context, String key, String currentValue) async {
-    final initialRange = _parseDateRange(currentValue);
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(DateTime.now().year - 1),
-      lastDate: DateTime(DateTime.now().year + 5, 12, 31),
-      initialDateRange: initialRange,
+  void _showEditDetailSheet(
+    BuildContext context,
+    String key,
+    String currentValue,
+  ) {
+    final TextEditingController controller = TextEditingController(
+      text: currentValue,
     );
-
-    if (picked == null || !mounted) return;
-
-    final formatted = _formatRangeLabel(picked);
-    widget.onConfirmedDetailUpdated(key, formatted);
-  }
-
-  DateTimeRange? _parseDateRange(String value) {
-    final sanitized = value.replaceAll('–', '-').replaceAll('—', '-');
-    final dashIndex = sanitized.indexOf('-');
-    if (dashIndex == -1) {
-      final parsed = DateTime.tryParse(sanitized);
-      if (parsed == null) return null;
-      return DateTimeRange(start: parsed, end: parsed.add(const Duration(days: 1)));
-    }
-
-    final left = sanitized.substring(0, dashIndex).trim();
-    final right = sanitized.substring(dashIndex + 1).trim();
-    final start = DateTime.tryParse(left);
-    final end = DateTime.tryParse(right);
-    if (start == null || end == null) return null;
-    return DateTimeRange(start: start, end: end);
-  }
-
-  void _showEditDetailSheet(BuildContext context, String key, String currentValue) {
-    if (key.toLowerCase().contains('date')) {
-      _showDateEditSheet(context, key, currentValue);
-      return;
-    }
-
-    final TextEditingController controller = TextEditingController(text: currentValue);
 
     showModalBottomSheet(
       context: context,
@@ -194,7 +106,10 @@ class _SummaryOverviewTabState extends State<SummaryOverviewTab> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryGreen,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -212,7 +127,7 @@ class _SummaryOverviewTabState extends State<SummaryOverviewTab> {
                   onPressed: () {
                     final newValue = controller.text.trim();
                     if (newValue.isNotEmpty) {
-                      widget.onConfirmedDetailUpdated(key, newValue);
+                      onConfirmedDetailUpdated(key, newValue);
                     }
                     Navigator.pop(context);
                   },
@@ -233,235 +148,289 @@ class _SummaryOverviewTabState extends State<SummaryOverviewTab> {
     );
   }
 
+  void _showEditBudgetSheet(
+    BuildContext context,
+    String key,
+    String currentValue,
+  ) {
+    final values = RegExp(r'\d+(?:\.\d+)?')
+        .allMatches(currentValue.replaceAll(',', ''))
+        .map((match) => match.group(0)!)
+        .toList();
+    final minController = TextEditingController(
+      text: values.isNotEmpty ? values.first : '',
+    );
+    final maxController = TextEditingController(
+      text: values.length > 1 ? values[1] : '',
+    );
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Edit Budget Range',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: minController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Minimum (RM)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: maxController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Maximum (RM)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  final minimum = double.tryParse(minController.text.trim());
+                  final maximum = double.tryParse(maxController.text.trim());
+                  if (minimum == null ||
+                      maximum == null ||
+                      minimum < 0 ||
+                      maximum < minimum) {
+                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Enter a valid minimum and maximum.'),
+                      ),
+                    );
+                    return;
+                  }
+                  String formatAmount(double amount) =>
+                      amount == amount.truncateToDouble()
+                          ? amount.toStringAsFixed(0)
+                          : amount.toStringAsFixed(2);
+                  onConfirmedDetailUpdated(
+                    key,
+                    'RM${formatAmount(minimum)} - RM${formatAmount(maximum)}',
+                  );
+                  Navigator.pop(sheetContext);
+                },
+                child: const Text(
+                  'Save Changes',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(() {
+      minController.dispose();
+      maxController.dispose();
+    });
+  }
+
+  Future<void> _showPreferenceDialog(
+    BuildContext context,
+    List<String> tags, {
+    String? existingTag,
+  }) async {
+    final controller = TextEditingController(text: existingTag ?? '');
+    final preference = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(existingTag == null ? 'Add Preference' : 'Edit Preference'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            hintText: 'Enter a preference',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              controller.text.trim(),
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (preference == null || preference.isEmpty) return;
+
+    if (existingTag == null) {
+      tags.add(preference);
+    } else {
+      final index = tags.indexOf(existingTag);
+      if (index != -1) tags[index] = preference;
+    }
+    onTagsUpdated();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pendingDecisionCount = tripSummary.pendingDecisions
+        .where((decision) => !decision.toLowerCase().contains('budget'))
+        .length;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // A. Planning Status Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Planning status',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
+              const Expanded(
+                child: Text(
+                  'Planning status',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF3E0),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${widget.tripSummary.pendingDecisions.length} TO DECIDE',
+                  '$pendingDecisionCount TO DECIDE',
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFEA7D00),
+                    color: Colors.orange,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           const Text(
-            'Needs your group to decide • tap a card to resolve it',
+            'Needs your group to decide · tap a card to resolve it',
             style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
           ),
-          const SizedBox(height: 16),
-          if ((widget.tripSummary.confirmedDetails['Budget'] ?? widget.tripSummary.budget).isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFA5D6A7)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_wallet_outlined,
-                      size: 18,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Budget range',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.tripSummary.confirmedDetails['Budget'] ?? widget.tripSummary.budget,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+          const SizedBox(height: 14),
+
+          // B. Status grid: every card (pending or confirmed) shares one
+          // fixed height and the same two-column layout.
+          GridView(
+            padding: EdgeInsets.zero,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.1,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              mainAxisExtent: _StatusTile.height,
+            ),
             children: [
-              ...widget.tripSummary.pendingDecisions
-                  .where((decision) => decision != 'Budget')
-                  .map((decision) {
-                return GestureDetector(
-                  onTap: widget.onSelectPendingDecision,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8E1),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFFFE082)),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.help_outline,
-                            size: 18,
-                            color: Color(0xFFE0A402),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          decision,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: AppTheme.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Needs decision',
-                          style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-              ...widget.tripSummary.confirmedDetails.entries
-                  .where((entry) => entry.key != 'Budget')
-                  .map((entry) {
-                return GestureDetector(
-                  onTap: () => _showEditDetailSheet(context, entry.key, entry.value),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFA5D6A7)),
-                    ),
-                    child: Stack(
-                      children: [
-                        const Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Icon(
-                            Icons.edit_outlined,
-                            size: 14,
-                            color: AppTheme.primaryGreen,
-                          ),
-                        ),
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _getCategoryIcon(entry.key),
-                                size: 20,
-                                color: AppTheme.primaryGreen,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                entry.key,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppTheme.textMuted,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                entry.value,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+              // Pending decisions -> tapping opens the Suggestions tab
+              ...tripSummary.pendingDecisions
+                  .where((decision) => !decision.toLowerCase().contains('budget'))
+                  .map(
+                (decision) => _StatusTile(
+                  kind: _TileKind.pending,
+                  icon: Icons.help_outline,
+                  label: decision,
+                  value: 'Needs decision',
+                  onTap: onSelectPendingDecision,
+                ),
+              ),
+
+              // Confirmed details -> tapping opens the edit sheet
+              ...tripSummary.confirmedDetails.entries
+                  .where((entry) => !entry.key.toLowerCase().contains('budget'))
+                  .map(
+                (entry) => _StatusTile(
+                  kind: _TileKind.confirmed,
+                  icon: _getCategoryIcon(entry.key),
+                  label: entry.key,
+                  value: entry.value,
+                  onTap: () =>
+                      _showEditDetailSheet(context, entry.key, entry.value),
+                ),
+              ),
+              _StatusTile(
+                kind: _TileKind.confirmed,
+                icon: _getCategoryIcon('Budget'),
+                label: 'Budget',
+                value: _budgetValue(tripSummary),
+                onTap: () => _showEditBudgetSheet(
+                  context,
+                  _budgetKey(tripSummary),
+                  _budgetValue(tripSummary),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 28),
-          const Text(
-            'Favourites',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textDark,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildFavouriteSection('Attractions', _attractionsFuture, _favoriteAttractionIds, _buildAttractionFavouriteCard),
-          const SizedBox(height: 12),
-          _buildFavouriteSection('Restaurants', _foodFuture, _favoriteFoodIds, _buildFoodFavouriteCard),
-          const SizedBox(height: 12),
-          _buildFavouriteSection('Stays', _hotelsFuture, _favoriteHotelIds, _buildHotelFavouriteCard),
+
           const SizedBox(height: 22),
+
+          // C. Group Preferences (sits directly under the status grid)
           const Text(
             'Preferences',
             style: TextStyle(
@@ -470,267 +439,26 @@ class _SummaryOverviewTabState extends State<SummaryOverviewTab> {
               color: AppTheme.textDark,
             ),
           ),
-          const SizedBox(height: 12),
-          _buildEditablePreferences(widget.tripSummary.preferenceTags),
-          const SizedBox(height: 30),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFavouriteSection<T>(
-    String title,
-    Future<List<T>> future,
-    Set<String> favourites,
-    Widget Function(T item, bool isFavorite, VoidCallback onToggle) cardBuilder,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              Text(
-                '${favourites.length} saved',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.textMuted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 10),
-          FutureBuilder<List<T>>(
-            future: future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Text('No favourites yet', style: TextStyle(color: AppTheme.textMuted));
-              }
 
-              final items = snapshot.data!;
-              return Column(
-                children: [
-                  for (final item in items.take(2))
-                    cardBuilder(
-                      item,
-                      _isFavoriteForCategory(title, item),
-                      () => _toggleFavorite(title, _itemIdForCategory(title, item)),
-                    ),
-                ],
-              );
-            },
-          ),
+          _buildEditablePreferences(context, tripSummary.preferenceTags),
+
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  bool _isFavoriteForCategory(String category, dynamic item) {
-    final id = _itemIdForCategory(category, item);
-    switch (category) {
-      case 'Attractions':
-        return _favoriteAttractionIds.contains(id);
-      case 'Restaurants':
-        return _favoriteFoodIds.contains(id);
-      case 'Stays':
-        return _favoriteHotelIds.contains(id);
-      default:
-        return false;
-    }
-  }
+  Widget _buildEditablePreferences(BuildContext context, List<String> tags) {
+    const chipShape = StadiumBorder();
+    const chipBorder = BorderSide(color: AppTheme.borderSubtle);
 
-  String _itemIdForCategory(String category, dynamic item) {
-    switch (category) {
-      case 'Attractions':
-        return (item as Attraction).id;
-      case 'Restaurants':
-        return (item as FoodOption).id;
-      case 'Stays':
-        return (item as HotelOption).id;
-      default:
-        return '';
-    }
-  }
-
-  Widget _buildAttractionFavouriteCard(Attraction item, bool isFavorite, VoidCallback onToggle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              item.imageUrl,
-              width: 64,
-              height: 64,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: Colors.grey[300]),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 3),
-                Text(item.location, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                const SizedBox(height: 4),
-                Text(item.price, style: const TextStyle(fontSize: 11, color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: onToggle,
-            icon: Icon(
-              isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite ? AppTheme.primaryGreen : AppTheme.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFoodFavouriteCard(FoodOption item, bool isFavorite, VoidCallback onToggle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              item.imageUrl,
-              width: 64,
-              height: 64,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: Colors.grey[300], child: const Icon(Icons.restaurant)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 3),
-                Text('${item.cuisineType} • ${item.priceTier}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.star, size: 12, color: Color(0xFFFBBC04)),
-                    const SizedBox(width: 2),
-                    Text(item.rating.toStringAsFixed(1), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: onToggle,
-            icon: Icon(
-              isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite ? AppTheme.primaryGreen : AppTheme.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHotelFavouriteCard(HotelOption item, bool isFavorite, VoidCallback onToggle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.hotel_outlined, color: AppTheme.primaryGreen, size: 28),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 3),
-                Text(item.location, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.star, size: 12, color: Color(0xFFFBBC04)),
-                    const SizedBox(width: 2),
-                    Text(item.rating.toStringAsFixed(1), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    const Spacer(),
-                    Text(item.pricePerNightFormatted, style: const TextStyle(fontSize: 11, color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: onToggle,
-            icon: Icon(
-              isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite ? AppTheme.primaryGreen : AppTheme.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEditablePreferences(List<String> tags) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        ...tags.map(
-          (tag) => Chip(
+          ...tags.map(
+          (tag) => InputChip(
             label: Text(
               tag,
               style: const TextStyle(
@@ -740,14 +468,23 @@ class _SummaryOverviewTabState extends State<SummaryOverviewTab> {
               ),
             ),
             backgroundColor: AppTheme.cardBackground,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: chipShape,
+            side: chipBorder,
+            onPressed: () => _showPreferenceDialog(
+              context,
+              tags,
+              existingTag: tag,
+            ),
             onDeleted: () {
               tags.remove(tag);
-              widget.onTagsUpdated();
+              onTagsUpdated();
             },
-            deleteIcon: const Icon(Icons.close, size: 16, color: AppTheme.textMuted),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide.none,
+            deleteIcon: const Icon(
+              Icons.close,
+              size: 16,
+              color: AppTheme.textMuted,
             ),
           ),
         ),
@@ -762,16 +499,121 @@ class _SummaryOverviewTabState extends State<SummaryOverviewTab> {
             ),
           ),
           backgroundColor: AppTheme.cardBackground,
-          onPressed: () {
-            tags.add('New Preference');
-            widget.onTagsUpdated();
-          },
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide.none,
-          ),
+          visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: chipShape,
+          side: chipBorder,
+          onPressed: () => _showPreferenceDialog(context, tags),
         ),
       ],
+    );
+  }
+}
+
+enum _TileKind { pending, confirmed }
+
+/// One compact card in the planning-status grid.
+///
+/// Pending and confirmed items use the exact same layout and height
+/// ([height]); only the colours and the status line differ.
+class _StatusTile extends StatelessWidget {
+  static const double height = 60;
+
+  final _TileKind kind;
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _StatusTile({
+    required this.kind,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPending = kind == _TileKind.pending;
+
+    final Color background = isPending
+        ? const Color(0xFFFFF8E1)
+        : const Color(0xFFE8F5E9);
+    final Color border = isPending
+        ? const Color(0xFFFFE082)
+        : const Color(0xFFA5D6A7);
+    final Color accent = isPending
+        ? const Color(0xFFC79100)
+        : AppTheme.primaryGreen;
+    final Color valueColor = isPending
+        ? const Color(0xFF9A6B00)
+        : AppTheme.textDark;
+
+    return Material(
+      color: background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        side: BorderSide(color: border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 16, color: accent),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                        if (!isPending)
+                          Icon(Icons.edit_outlined, size: 12, color: accent),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: valueColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

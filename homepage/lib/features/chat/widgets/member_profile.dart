@@ -127,8 +127,28 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
   late List<String> _preferences;
   late DateTimeRange _tripDateRange;
   late DateTime _calendarMonth;
+  late final TextEditingController _minimumBudgetController;
+  late final TextEditingController _maximumBudgetController;
+  bool _isEditingBudget = false;
   LeaveData? _leaveData;
   bool _isLoadingLeave = true;
+
+  @override
+  void didUpdateWidget(covariant MemberProfileCardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final memberBudgetChanged =
+        oldWidget.member.id != widget.member.id ||
+        oldWidget.member.minBudget != widget.member.minBudget ||
+        oldWidget.member.maxBudget != widget.member.maxBudget;
+    if (memberBudgetChanged && !_isEditingBudget) {
+      _budgetRange = RangeValues(
+        widget.member.minBudget,
+        widget.member.maxBudget,
+      );
+      _minimumBudgetController.text = _budgetRange.start.round().toString();
+      _maximumBudgetController.text = _budgetRange.end.round().toString();
+    }
+  }
 
   @override
   void initState() {
@@ -137,6 +157,12 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
       widget.member.minBudget,
       widget.member.maxBudget,
     );
+    _minimumBudgetController = TextEditingController(
+      text: _budgetRange.start.round().toString(),
+    );
+    _maximumBudgetController = TextEditingController(
+      text: _budgetRange.end.round().toString(),
+    );
     _preferences = List.from(widget.member.preferences);
     _tripDateRange = _parseDateRange(widget.member.dateRange);
     _calendarMonth = DateTime(
@@ -144,6 +170,13 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
       _tripDateRange.start.month,
     );
     _loadLeaveData(year: _calendarMonth.year);
+  }
+
+  @override
+  void dispose() {
+    _minimumBudgetController.dispose();
+    _maximumBudgetController.dispose();
+    super.dispose();
   }
 
   DateTimeRange _parseDateRange(String dateRange) {
@@ -283,26 +316,20 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
             _statusTile(
               context,
               dateKey,
-              'Normal working day',
-              DateStatus.normal,
-            ),
-            _statusTile(
-              context,
-              dateKey,
-              'Busy / high priority',
+              'Busy',
               DateStatus.busy,
             ),
             _statusTile(
               context,
               dateKey,
-              'Annual leave',
-              DateStatus.annualLeave,
+              'Normal',
+              DateStatus.normal,
             ),
             _statusTile(
               context,
               dateKey,
-              'Recommended bridge day',
-              DateStatus.recommended,
+              'Leave Taken',
+              DateStatus.annualLeave,
             ),
           ],
         ),
@@ -328,62 +355,48 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
     onTap: () => Navigator.pop(context, status),
   );
 
-  void _updateBudget(RangeValues values) {
+  void _startBudgetEdit() {
     if (!widget.member.isMe) return;
-    setState(() {
-      _budgetRange = values;
-    });
-    _summaryService.updateMemberBudget(
-      memberId: widget.member.id,
-      minBudget: values.start,
-      maxBudget: values.end,
-    );
-    widget.onMemberUpdated?.call();
+    _minimumBudgetController.text = _budgetRange.start.round().toString();
+    _maximumBudgetController.text = _budgetRange.end.round().toString();
+    setState(() => _isEditingBudget = true);
   }
 
-  Future<void> _editBudgetValue({required bool isMinimum}) async {
-    final currentValue = isMinimum ? _budgetRange.start : _budgetRange.end;
-    final controller = TextEditingController(
-      text: currentValue.round().toString(),
-    );
-    final editedValue = await showDialog<double>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isMinimum ? 'Minimum trip budget' : 'Maximum trip budget'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-          ],
-          decoration: const InputDecoration(
-            prefixText: 'RM ',
-            labelText: 'Amount',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text);
-              if (value != null && value >= 0) Navigator.pop(context, value);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (editedValue == null || !mounted) return;
+  void _cancelBudgetEdit() {
+    _minimumBudgetController.text = _budgetRange.start.round().toString();
+    _maximumBudgetController.text = _budgetRange.end.round().toString();
+    setState(() => _isEditingBudget = false);
+  }
 
-    final updatedRange = isMinimum
-        ? RangeValues(editedValue, math.max(_budgetRange.end, editedValue))
-        : RangeValues(math.min(_budgetRange.start, editedValue), editedValue);
-    _updateBudget(updatedRange);
+  Future<void> _saveBudgetEdit() async {
+    final minimum = int.tryParse(_minimumBudgetController.text);
+    final maximum = int.tryParse(_maximumBudgetController.text);
+    if (minimum == null || maximum == null || maximum < minimum) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid minimum and maximum budget.')),
+      );
+      return;
+    }
+
+    final updated = RangeValues(minimum.toDouble(), maximum.toDouble());
+    final saved = await _summaryService.updateMemberBudget(
+      memberId: widget.member.id,
+      minBudget: updated.start,
+      maxBudget: updated.end,
+    );
+    if (!mounted) return;
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update the trip budget.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _budgetRange = updated;
+      _isEditingBudget = false;
+    });
+    widget.onMemberUpdated?.call();
   }
 
   void _addPreferenceDialog() {
@@ -545,82 +558,86 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
 
           const SizedBox(height: 16),
 
-          // 2. TRIP BUDGET RANGE (Editable for 'Ying (You)')
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 4,
+          // 2. TRIP BUDGET RANGE
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                widget.member.isMe
-                    ? 'TRIP BUDGET RANGE (EDITABLE)'
-                    : 'TRIP BUDGET RANGE',
-                style: const TextStyle(
+              const Text(
+                'TRIP BUDGET RANGE',
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF788896),
                   letterSpacing: 0.5,
                 ),
               ),
-              InkWell(
-                onTap: widget.member.isMe
-                    ? () => _editBudgetValue(isMinimum: false)
-                    : null,
-                child: Text(
-                  'RM$minVal – RM$maxVal',
-                  textAlign: TextAlign.end,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textDark,
+              if (!_isEditingBudget)
+                InkWell(
+                  onTap: widget.member.isMe ? _startBudgetEdit : null,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'RM$minVal – RM$maxVal',
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 4),
-
-          RangeSlider(
-            values: _budgetRange,
-            min: 0,
-            max: math.max(10000.0, _budgetRange.end),
-            activeColor: AppTheme.primaryGreen,
-            inactiveColor: Colors.grey.shade200,
-            onChanged: widget.member.isMe ? _updateBudget : null,
-          ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              InkWell(
-                onTap: widget.member.isMe
-                    ? () => _editBudgetValue(isMinimum: true)
-                    : null,
-                child: Text(
-                  'MIN RM $minVal',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textMuted,
+          if (_isEditingBudget) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _minimumBudgetController,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      prefixText: 'RM ',
+                      hintText: 'Min',
+                      isDense: true,
+                    ),
                   ),
                 ),
-              ),
-              InkWell(
-                onTap: widget.member.isMe
-                    ? () => _editBudgetValue(isMinimum: false)
-                    : null,
-                child: Text(
-                  'MAX RM $maxVal',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textMuted,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _maximumBudgetController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      prefixText: 'RM ',
+                      hintText: 'Max',
+                      isDense: true,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+                IconButton(
+                  tooltip: 'Save budget',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _saveBudgetEdit,
+                  icon: const Icon(
+                    Icons.check_circle,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cancel editing',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _cancelBudgetEdit,
+                  icon: const Icon(Icons.close, color: AppTheme.textMuted),
+                ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: 16),
 
@@ -706,9 +723,10 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
       selectedYear: _calendarMonth.year,
       currentMonthIndex: _calendarMonth.month - 1,
       dateStatuses: _leaveData?.dateStatuses ?? const {},
-      selectedDateRange: _tripDateRange,
+      selectedDateRange: null,
       onDateTap: _showLeaveStatusPicker,
       onMonthChanged: _changeCalendarMonth,
+      showLegend: false,
     );
   }
 }

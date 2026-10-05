@@ -9,6 +9,10 @@ class FlightOption {
   final String terminal;
   final String priceFormatted;
   final String bookingUrl;
+  final String route;
+  final String stops;
+  final String baggage;
+  bool isFavourite;
 
   FlightOption({
     required this.id,
@@ -21,6 +25,10 @@ class FlightOption {
     required this.terminal,
     required this.priceFormatted,
     required this.bookingUrl,
+    this.route = '',
+    this.stops = '',
+    this.baggage = '',
+    this.isFavourite = false,
   });
 
   factory FlightOption.fromJson(Map<String, dynamic> json) {
@@ -35,8 +43,29 @@ class FlightOption {
       terminal: json['terminal'] as String? ?? '',
       priceFormatted: json['price_formatted'] as String? ?? '',
       bookingUrl: json['booking_url'] as String? ?? '',
+      route: json['route'] as String? ?? '',
+      stops: json['stops'] as String? ?? '',
+      baggage: json['baggage'] as String? ?? '',
+      isFavourite: json['is_favourite'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'airline_name': airlineName,
+    'airline_logo_url': airlineLogoUrl,
+    'departure_time': departureTime,
+    'arrival_time': arrivalTime,
+    'duration': duration,
+    'flight_type': flightType,
+    'terminal': terminal,
+    'price_formatted': priceFormatted,
+    'booking_url': bookingUrl,
+    'route': route,
+    'stops': stops,
+    'baggage': baggage,
+    'is_favourite': isFavourite,
+  };
 }
 
 class FlightDateChip {

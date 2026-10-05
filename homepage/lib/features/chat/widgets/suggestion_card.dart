@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../models/group_trip_summary.dart';
+import 'favorite_icon_button.dart';
 
 class SuggestionCard extends StatelessWidget {
   final GroupSuggestion suggestion;
@@ -59,15 +60,9 @@ class SuggestionCard extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: IconButton(
+                  child: FavoriteIconButton(
+                    isFavorite: suggestion.isSaved,
                     onPressed: onToggleFavorite,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    icon: Icon(
-                      suggestion.isSaved ? Icons.favorite : Icons.favorite_border,
-                      color: suggestion.isSaved ? Colors.red : Colors.grey,
-                      size: 18,
-                    ),
                   ),
                 ),
               ),

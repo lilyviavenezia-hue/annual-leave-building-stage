@@ -8,12 +8,14 @@ class GroupMembersDrawer extends StatefulWidget {
   final List<GroupMember> members;
   final VoidCallback? onAddMemberPressed;
   final ValueChanged<GroupMember>? onRemoveMember;
+  final VoidCallback? onMemberUpdated;
 
   const GroupMembersDrawer({
     super.key,
     required this.members,
     this.onAddMemberPressed,
     this.onRemoveMember,
+    this.onMemberUpdated,
   });
 
   @override
@@ -90,6 +92,7 @@ class _GroupMembersDrawerState extends State<GroupMembersDrawer> {
                     onRemoveMember: isHost && !member.isMe
                         ? () => widget.onRemoveMember?.call(member)
                         : null,
+                    onMemberUpdated: widget.onMemberUpdated,
                     onToggleExpand: () {
                       setState(() {
                         _expandedMemberId = isExpanded ? null : member.id;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../models/group_trip_summary.dart';
 import '../../services/group_summary_service.dart';
@@ -20,7 +21,7 @@ class TripSummaryScreen extends StatefulWidget {
 class _TripSummaryScreenState extends State<TripSummaryScreen> {
   final GroupSummaryService _summaryService = GroupSummaryService();
 
-  int _selectedTabIndex = 0; // 0: Overview, 1: Suggestions
+  int _selectedTabIndex = 1;
   GroupTripSummary? _tripSummary;
   List<GroupSuggestion> _suggestions = [];
   bool _isLoading = true;
@@ -35,13 +36,12 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     final summary = await _summaryService.getTripSummary(widget.groupId);
     final suggestions = await _summaryService.getGroupSuggestions(widget.groupId);
 
-    if (mounted) {
-      setState(() {
-        _tripSummary = summary;
-        _suggestions = suggestions;
-        _isLoading = false;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _tripSummary = summary;
+      _suggestions = suggestions;
+      _isLoading = false;
+    });
   }
 
   void _handleConfirmedDetailUpdated(String key, String newValue) {

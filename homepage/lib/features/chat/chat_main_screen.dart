@@ -39,11 +39,46 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
   }
 
   Future<void> _handleAcceptInvitation(String invitationId) async {
+    final invitedChat = _invitations.firstWhere(
+      (invitation) => invitation.id == invitationId,
+      orElse: () => TripInvitation(
+        id: invitationId,
+        groupId: '',
+        hostName: '',
+        hostAvatar: '',
+        tripTitle: '',
+        destination: '',
+        dates: '',
+      ),
+    );
+
     await _chatListService.acceptInvitation(invitationId);
     if (mounted) {
       setState(() {
         _invitations.removeWhere((inv) => inv.id == invitationId);
+
+        if (invitedChat.groupId.isNotEmpty &&
+            !_conversations.any((chat) => chat.groupId == invitedChat.groupId)) {
+          _conversations.insert(
+            0,
+            ChatConversation(
+              groupId: invitedChat.groupId,
+              title: invitedChat.tripTitle,
+              destination: invitedChat.destination,
+              lastMessage: 'Welcome to the group chat.',
+              lastMessageTime: DateTime.now(),
+              unreadCount: 0,
+              avatarUrl: invitedChat.hostAvatar,
+              isLiveSync: true,
+            ),
+          );
+        }
       });
+
+      if (invitedChat.groupId.isNotEmpty) {
+        context.push('/chat/${invitedChat.groupId}');
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invitation accepted! Group chat added.')),
       );

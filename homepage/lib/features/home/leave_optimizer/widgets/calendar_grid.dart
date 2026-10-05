@@ -87,7 +87,12 @@ class CalendarGrid extends StatelessWidget {
             final dateKey =
                 '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-            final status = dateStatuses[dateKey] ?? DateStatus.normal;
+            final storedStatus = dateStatuses[dateKey] ?? DateStatus.normal;
+            final status = storedStatus == DateStatus.holiday ||
+                    storedStatus == DateStatus.busy ||
+                    storedStatus == DateStatus.annualLeave
+                ? storedStatus
+                : DateStatus.normal;
             final selectedRange = selectedDateRange;
             final isInSelectedRange =
                 selectedRange != null &&
@@ -106,23 +111,48 @@ class CalendarGrid extends StatelessWidget {
                   ),
                 );
 
-            return GestureDetector(
-              onTap: () => onDateTap(date),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: status.backgroundColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: isInSelectedRange
-                      ? Border.all(color: AppTheme.primaryGreen, width: 1.5)
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '$dayNumber',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: status.textColor,
+            final isMarked = status != DateStatus.normal;
+
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => onDateTap(date),
+                borderRadius: BorderRadius.circular(11),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
+                    color: status.backgroundColor,
+                    borderRadius: BorderRadius.circular(11),
+                    border: isInSelectedRange
+                        ? Border.all(
+                            color: AppTheme.primaryGreen,
+                            width: 1.5,
+                          )
+                        : Border.all(
+                            color: isMarked
+                                ? status.textColor.withValues(alpha: 0.24)
+                                : Colors.transparent,
+                            width: 1,
+                          ),
+                    boxShadow: isMarked
+                        ? [
+                            BoxShadow(
+                              color: status.textColor.withValues(alpha: 0.08),
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$dayNumber',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isMarked ? FontWeight.w700 : FontWeight.w600,
+                      color: status.textColor,
+                    ),
                   ),
                 ),
               ),

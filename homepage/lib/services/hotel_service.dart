@@ -22,4 +22,13 @@ class HotelService {
         .map((item) => HotelOption.fromJson(item as Map<String, dynamic>))
         .toList();
   }
+
+  Future<bool> setHotelFavourite(String id, bool isFavourite) {
+    final hotels = mockHotelSearchResults['hotels'] as List<dynamic>? ?? const [];
+    final hotel = hotels.where((item) => (item as Map)['id'] == id);
+    if (hotel.isEmpty) return Future.value(false);
+
+    (hotel.first as Map<String, dynamic>)['is_favourite'] = isFavourite;
+    return Future.value(true);
+  }
 }

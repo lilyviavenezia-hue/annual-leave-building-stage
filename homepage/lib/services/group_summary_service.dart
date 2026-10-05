@@ -1,122 +1,174 @@
-import '../mock/mock_trip_summary.dart';
+// lib/services/group_summary_service.dart
+
+import '../mock/mock_group_summary_data_source.dart';
 import '../models/group_member.dart';
 import '../models/group_trip_summary.dart';
+import 'account_service.dart';
 
 class GroupSummaryService {
+  GroupSummaryService({GroupSummaryMockDataSource? dataSource})
+      : _dataSource = dataSource ?? GroupSummaryMockDataSource();
+
+  final GroupSummaryMockDataSource _dataSource;
+  final AccountService _accountService = AccountService();
+
   Future<GroupTripSummary> getTripSummary(String groupId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final memberCount = mockGroupMembersData.length;
-    final minBudget = mockGroupMembersData.fold<double>(
-      double.infinity,
-      (value, item) => (item['minBudget'] as num).toDouble() < value
-          ? (item['minBudget'] as num).toDouble()
-          : value,
+    final groupData = await _dataSource.fetchGroup(groupId);
+    final membersData =
+        groupData['members'] as List<dynamic>? ?? const <dynamic>[];
+    final summaryData = Map<String, dynamic>.from(
+      groupData['summary'] as Map? ?? const <String, dynamic>{},
     );
-    final maxBudget = mockGroupMembersData.fold<double>(
-      0,
-      (value, item) => (item['maxBudget'] as num).toDouble() > value
-          ? (item['maxBudget'] as num).toDouble()
-          : value,
-    );
-    final budgetRange = 'RM${minBudget.toInt()} - RM${maxBudget.toInt()}';
+
+    var minBudget = double.infinity;
+    var maxBudget = 0.0;
+    for (final item in membersData) {
+      final member = item as Map<String, dynamic>;
+      final memberMin = (member['minBudget'] as num? ?? 0).toDouble();
+      final memberMax = (member['maxBudget'] as num? ?? 0).toDouble();
+      if (memberMin < minBudget) minBudget = memberMin;
+      if (memberMax > maxBudget) maxBudget = memberMax;
+    }
+    final actualMin = minBudget == double.infinity ? 0.0 : minBudget;
+    final budgetRange = 'RM${actualMin.toInt()} - RM${maxBudget.toInt()}';
+
+    final destination = (summaryData['destination'] as String?) ?? '';
+    final dates = (summaryData['dates'] as String?) ?? '';
+    final completedItems =
+        (summaryData['completedItems'] as num?)?.toInt() ?? 0;
+    final totalItems = (summaryData['totalItems'] as num?)?.toInt() ?? 0;
+    final pendingDecisions =
+        (summaryData['pendingDecisions'] as List<dynamic>? ??
+                const <dynamic>[])
+            .map((entry) => entry.toString())
+            .toList();
+
+    final preferenceTags = membersData
+        .expand(
+          (member) =>
+              (member as Map<String, dynamic>)['preferences']
+                  as List<dynamic>? ??
+              const <dynamic>[],
+        )
+        .map((entry) => entry.toString())
+        .toSet()
+        .toList();
+
     final confirmedDetails = Map<String, String>.from(
-      mockTripSummaryData['confirmedDetails'] as Map,
+      summaryData['confirmedDetails'] as Map? ?? {},
     )
-      ..['Traveller'] = '$memberCount Friends'
+      ..['Destination'] = destination.isNotEmpty ? destination : 'To be decided'
+      ..['Dates'] = dates.isNotEmpty ? dates : 'To be decided'
+      ..['Traveller'] = '${membersData.length} Friends'
       ..['Budget'] = budgetRange;
 
     return GroupTripSummary.fromJson({
-      ...mockTripSummaryData,
+      'groupId': groupId,
+      'title': summaryData['title'] ?? 'New Trip',
+      'dates': dates,
+      'destination': destination,
       'budget': budgetRange,
+      'progress': totalItems > 0 ? completedItems / totalItems : 0.0,
+      'completedItems': completedItems,
+      'totalItems': totalItems,
+      'pendingDecisions': pendingDecisions,
       'confirmedDetails': confirmedDetails,
+      'preferenceTags': preferenceTags,
+      'isReadyToPlan': false,
     });
   }
 
   Future<List<GroupSuggestion>> getGroupSuggestions(String groupId) async {
-    await Future.delayed(const Duration(milliseconds: 250));
-    return mockGroupSuggestionsData
-        .map((json) => GroupSuggestion.fromJson(json))
+    final groupData = await _dataSource.fetchGroup(groupId);
+    final list = groupData['suggestions'] as List<dynamic>? ?? const <dynamic>[];
+    return list
+        .map((json) => GroupSuggestion.fromJson(json as Map<String, dynamic>))
         .toList();
   }
 
+  Future<bool> setGroupSuggestionSaved({
+    required String groupId,
+    required String suggestionId,
+    required bool isSaved,
+  }) {
+    return _dataSource.updateSuggestionSaved(
+      groupId: groupId,
+      suggestionId: suggestionId,
+      isSaved: isSaved,
+    );
+  }
+
   Future<List<GroupMember>> getGroupMembers(String groupId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return mockGroupMembersData
-        .map((json) => GroupMember.fromJson(json))
-        .toList();
+    final groupData = await _dataSource.fetchGroup(groupId);
+    final profile = await _accountService.getCurrentUser();
+    final list = groupData['members'] as List<dynamic>? ?? const <dynamic>[];
+
+    return list.map((json) {
+      final memberJson =
+          Map<String, dynamic>.from(json as Map<String, dynamic>);
+      // The group's own member list is the source of truth for everyone except
+      // the signed-in user, whose avatar always follows their account profile.
+      final isMe = memberJson['isMe'] as bool? ?? memberJson['id'] == 'user_me';
+      if (isMe && profile != null && profile.avatarUrl.isNotEmpty) {
+        memberJson['avatarUrl'] = profile.avatarUrl;
+      }
+      return GroupMember.fromJson(memberJson);
+    }).toList();
   }
 
   Future<int> getGroupMemberCount(String groupId) async =>
       (await getGroupMembers(groupId)).length;
 
-  Future<bool> addGroupMember(GroupMember member) async {
-    await Future<void>.delayed(const Duration(milliseconds: 150));
-    if (mockGroupMembersData.any((entry) => entry['id'] == member.id)) {
-      return false;
-    }
-    mockGroupMembersData.add(member.toJson());
-    return true;
-  }
-
-  Future<bool> removeGroupMember({
-    required String requesterId,
-    required String memberId,
-  }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 150));
-    final requesterIsHost = mockGroupMembersData.any(
-      (entry) => entry['id'] == requesterId && entry['role'] == 'Host',
-    );
-    if (!requesterIsHost) return false;
-
-    final index = mockGroupMembersData.indexWhere(
-      (entry) =>
-          entry['id'] == memberId &&
-          entry['isMe'] != true &&
-          entry['role'] != 'Host',
-    );
-    if (index == -1) return false;
-    mockGroupMembersData.removeAt(index);
-    return true;
-  }
-
-  /// Updates budget range for a specific member in mock storage
   Future<bool> updateMemberBudget({
     required String memberId,
     required double minBudget,
     required double maxBudget,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    final index = mockGroupMembersData.indexWhere((m) => m['id'] == memberId);
-    if (index != -1) {
-      mockGroupMembersData[index]['minBudget'] = minBudget;
-      mockGroupMembersData[index]['maxBudget'] = maxBudget;
-      return true;
-    }
-    return false;
+    String? groupId,
+  }) {
+    return _dataSource.updateMember(
+      groupId: groupId,
+      memberId: memberId,
+      changes: {'minBudget': minBudget, 'maxBudget': maxBudget},
+    );
   }
 
   Future<bool> updateMemberDateRange({
     required String memberId,
     required String dateRange,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    final index = mockGroupMembersData.indexWhere((m) => m['id'] == memberId);
-    if (index == -1) return false;
-    mockGroupMembersData[index]['dateRange'] = dateRange;
-    return true;
+    String? groupId,
+  }) {
+    return _dataSource.updateMember(
+      groupId: groupId,
+      memberId: memberId,
+      changes: {'dateRange': dateRange},
+    );
   }
 
-  /// Updates preference tags for a specific member in mock storage
   Future<bool> updateMemberPreferences({
     required String memberId,
     required List<String> preferences,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    final index = mockGroupMembersData.indexWhere((m) => m['id'] == memberId);
-    if (index != -1) {
-      mockGroupMembersData[index]['preferences'] = List.from(preferences);
-      return true;
-    }
-    return false;
+    String? groupId,
+  }) {
+    return _dataSource.updateMember(
+      groupId: groupId,
+      memberId: memberId,
+      changes: {'preferences': List<String>.from(preferences)},
+    );
+  }
+
+  Future<bool> addGroupMember(String groupId, GroupMember member) {
+    return _dataSource.addMember(groupId, member.toJson());
+  }
+
+  Future<bool> removeGroupMember({
+    required String groupId,
+    required String requesterId,
+    required String memberId,
+  }) {
+    return _dataSource.removeMember(
+      groupId: groupId,
+      requesterId: requesterId,
+      memberId: memberId,
+    );
   }
 }

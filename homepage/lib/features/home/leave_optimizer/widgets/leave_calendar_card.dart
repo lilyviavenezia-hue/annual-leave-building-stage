@@ -11,6 +11,7 @@ class LeaveCalendarCard extends StatelessWidget {
   final DateTimeRange? selectedDateRange;
   final ValueChanged<DateTime> onDateTap;
   final void Function(int year, int monthIndex) onMonthChanged;
+  final bool showLegend;
 
   const LeaveCalendarCard({
     super.key,
@@ -20,6 +21,7 @@ class LeaveCalendarCard extends StatelessWidget {
     required this.onDateTap,
     required this.onMonthChanged,
     this.selectedDateRange,
+    this.showLegend = true,
   });
 
   @override
@@ -38,16 +40,6 @@ class LeaveCalendarCard extends StatelessWidget {
       'November',
       'December',
     ];
-    final monthPrefix =
-        '$selectedYear-${(currentMonthIndex + 1).toString().padLeft(2, '0')}';
-    final publicHolidayCount = dateStatuses.entries
-        .where(
-          (entry) =>
-              entry.key.startsWith(monthPrefix) &&
-              entry.value == DateStatus.holiday,
-        )
-        .length;
-
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.cardBackground,
@@ -56,48 +48,44 @@ class LeaveCalendarCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${months[currentMonthIndex]} $selectedYear',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textDark,
-                  ),
-                ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${months[currentMonthIndex]} $selectedYear',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.badgeGreenLight,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$publicHolidayCount Public Holiday${publicHolidayCount == 1 ? '' : 's'}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.primaryGreen,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            runSpacing: 8,
-            children: [
-              _buildLegendItem('Busy', AppTheme.statusBusyBg),
-              _buildLegendItem('Holiday', AppTheme.statusHolidayBg),
-              _buildLegendItem('Annual Leave', AppTheme.statusAnnualLeaveBg),
-              _buildLegendItem('Recommended', AppTheme.statusRecommendedBg),
-            ],
-          ),
+          if (showLegend) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.start,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildLegendItem(
+                  'Busy',
+                  AppTheme.statusBusyBg,
+                  AppTheme.statusBusyText,
+                ),
+                _buildLegendItem(
+                  'Holiday',
+                  AppTheme.statusHolidayBg,
+                  AppTheme.statusHolidayText,
+                ),
+                _buildLegendItem(
+                  'Annual Leave Taken',
+                  AppTheme.statusAnnualLeaveBg,
+                  AppTheme.statusAnnualLeaveText,
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           GestureDetector(
             onHorizontalDragEnd: (details) {
@@ -122,22 +110,36 @@ class LeaveCalendarCard extends StatelessWidget {
     );
   }
 
-  Widget _buildLegendItem(String label, Color color) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
+  Widget _buildLegendItem(String label, Color background, Color textColor) =>
       Container(
-        width: 8,
-        height: 8,
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(2),
+          color: background.withValues(alpha: 0.68),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: textColor.withValues(alpha: 0.16)),
         ),
-      ),
-      const SizedBox(width: 4),
-      Text(
-        label,
-        style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
-      ),
-    ],
-  );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: textColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                height: 1,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      );
 }

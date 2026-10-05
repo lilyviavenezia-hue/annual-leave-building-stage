@@ -17,6 +17,8 @@ import 'package:homempage/models/chat_message.dart';
 import 'package:homempage/models/food_option.dart';
 import 'package:homempage/models/group_member.dart';
 import 'package:homempage/main.dart';
+import 'package:homempage/services/recommendation_service.dart';
+import 'package:homempage/services/group_summary_service.dart';
 
 void main() {
   testWidgets('Trips tab opens the itinerary overview', (
@@ -82,6 +84,7 @@ void main() {
             body: SizedBox(
               height: 600,
               child: SummarySuggestionsTab(
+                key: const ValueKey('remounted-suggestions-tab'),
                 suggestions: const [],
                 destinationCity: 'Kyoto',
               ),
@@ -95,19 +98,46 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Kiyomizu-dera'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Favourite').first);
+      await tester.tap(find.byTooltip('Add favourite').first);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Remove favourite'), findsOneWidget);
+      expect(
+        (await RecommendationService().getRecommendedAttractions())
+            .first
+            .isFavourite,
+        isTrue,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: SummarySuggestionsTab(
+                suggestions: const [],
+                destinationCity: 'Kyoto',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Favourites'));
+      await tester.pumpAndSettle();
+      expect(find.text('Kiyomizu-dera'), findsOneWidget);
+      await tester.tap(find.byTooltip('Remove favourite').first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.widgetWithText(ChoiceChip, 'Restaurants'));
       await tester.pumpAndSettle();
       expect(find.text('Gion Ramen Specialty'), findsOneWidget);
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Favourite').first);
+      await tester.tap(find.byTooltip('Add favourite').first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.widgetWithText(ChoiceChip, 'Stays'));
       await tester.pumpAndSettle();
       expect(find.text('Kyoto Ryokan Sano'), findsOneWidget);
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Favourite').first);
+      await tester.tap(find.byTooltip('Add favourite').first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.widgetWithText(ChoiceChip, 'Favourites'));
@@ -116,22 +146,54 @@ void main() {
       expect(find.text('Gion Ramen Specialty'), findsOneWidget);
       expect(find.text('Kyoto Ryokan Sano'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Saved').first);
+      await tester.tap(find.byTooltip('Remove favourite').first);
       await tester.pumpAndSettle();
       expect(find.text('Kiyomizu-dera'), findsNothing);
       expect(find.text('Gion Ramen Specialty'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Saved').first);
+      await tester.tap(find.byTooltip('Remove favourite').first);
       await tester.pumpAndSettle();
       expect(find.text('Gion Ramen Specialty'), findsNothing);
       expect(find.text('Kyoto Ryokan Sano'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Saved').first);
+      await tester.tap(find.byTooltip('Remove favourite').first);
       await tester.pumpAndSettle();
       expect(find.text('Kyoto Ryokan Sano'), findsNothing);
       expect(find.text('No favourite suggestions yet.'), findsOneWidget);
     },
   );
+
+  testWidgets('group suggestions share favourite state with Favourites tab', (
+    WidgetTester tester,
+  ) async {
+    final suggestions = await GroupSummaryService().getGroupSuggestions(
+      'group_kyoto_1',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 600,
+            child: SummarySuggestionsTab(
+              suggestions: suggestions,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Add favourite').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Favourites'));
+    await tester.pumpAndSettle();
+    expect(find.text('Kiyomizu-dera'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Remove favourite').first);
+    await tester.pumpAndSettle();
+    expect(find.text('No favourite suggestions yet.'), findsOneWidget);
+  });
 
   testWidgets('chat bubble asks AI on a left swipe', (
     WidgetTester tester,

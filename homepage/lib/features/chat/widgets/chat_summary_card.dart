@@ -22,7 +22,6 @@ class ChatSummaryCard extends StatelessWidget {
     final dates = tripSummary.confirmedDetails['Dates'] ?? tripSummary.dates;
     final destination =
         tripSummary.confirmedDetails['Destination'] ?? tripSummary.destination;
-    final budget = tripSummary.confirmedDetails['Budget'] ?? tripSummary.budget;
 
     final int completedItems = tripSummary.completedItems;
     final int totalItems = tripSummary.totalItems;
@@ -130,7 +129,7 @@ class ChatSummaryCard extends StatelessWidget {
             if (isExpanded) ...[
               const SizedBox(height: 10),
 
-              // Key Details Grid (DATES, DESTINATION, BUDGET)
+              // Key Details Grid (DATES, DESTINATION)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -177,32 +176,6 @@ class ChatSummaryCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           destination,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'BUDGET',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF788896),
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          budget,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,

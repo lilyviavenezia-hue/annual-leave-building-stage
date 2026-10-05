@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:homempage/core/theme/app_theme.dart ';
-
+import '../../../core/theme/app_theme.dart';
 import '../../../models/group_member.dart';
 import 'member_profile.dart';
 
@@ -9,6 +8,7 @@ class MemberListTile extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onToggleExpand;
   final VoidCallback? onRemoveMember;
+  final VoidCallback? onMemberUpdated;
 
   const MemberListTile({
     super.key,
@@ -16,17 +16,44 @@ class MemberListTile extends StatelessWidget {
     required this.isExpanded,
     required this.onToggleExpand,
     this.onRemoveMember,
+    this.onMemberUpdated,
   });
+
+  Widget _buildAvatar() {
+    final avatarUrl = member.avatarUrl;
+    final initial = Text(
+      member.name.isNotEmpty ? member.name[0] : '',
+      style: const TextStyle(
+        color: AppTheme.primaryGreen,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+
+    Widget child = initial;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      final image = avatarUrl.startsWith('assets/')
+          ? Image.asset(
+              avatarUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => initial,
+            )
+          : Image.network(
+              avatarUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => initial,
+            );
+      child = ClipOval(child: SizedBox.expand(child: image));
+    }
+
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.12),
+      child: child,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = member.avatarUrl;
-    final ImageProvider? avatarImage = avatarUrl == null
-        ? null
-        : avatarUrl.startsWith('assets/')
-        ? AssetImage(avatarUrl)
-        : NetworkImage(avatarUrl);
-
     return Column(
       children: [
         ListTile(
@@ -34,20 +61,7 @@ class MemberListTile extends StatelessWidget {
             horizontal: 20,
             vertical: 4,
           ),
-          leading: CircleAvatar(
-            radius: 22,
-            backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.12),
-            backgroundImage: avatarImage,
-            child: avatarUrl == null
-                ? Text(
-                    member.name.isNotEmpty ? member.name[0] : '',
-                    style: const TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
-          ),
+          leading: _buildAvatar(),
           title: Text(
             member.name,
             style: const TextStyle(
@@ -97,7 +111,10 @@ class MemberListTile extends StatelessWidget {
               horizontal: 16.0,
               vertical: 8.0,
             ),
-            child: MemberProfileCardWidget(member: member),
+            child: MemberProfileCardWidget(
+              member: member,
+              onMemberUpdated: onMemberUpdated,
+            ),
           ),
         const Divider(height: 1, indent: 20, endIndent: 20),
       ],

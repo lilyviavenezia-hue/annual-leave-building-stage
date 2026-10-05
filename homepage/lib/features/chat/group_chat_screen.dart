@@ -84,6 +84,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     }
   }
 
+  Future<void> _refreshGroupMembers() async {
+    final members = await _summaryService.getGroupMembers(widget.groupId);
+    if (!mounted) return;
+    setState(() => _groupMembers = members);
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -180,7 +186,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         )
         .toList();
     for (final member in newMembers) {
-      await _chatService.addGroupMember(member);
+      await _chatService.addGroupMember(widget.groupId, member);
     }
     final updatedMembers = await _chatService.getGroupMembers(widget.groupId);
     final updatedSummary = await _summaryService.getTripSummary(widget.groupId);
@@ -396,6 +402,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         members: _groupMembers,
         onAddMemberPressed: _addGroupMembers,
         onRemoveMember: _removeGroupMember,
+        onMemberUpdated: _refreshGroupMembers,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

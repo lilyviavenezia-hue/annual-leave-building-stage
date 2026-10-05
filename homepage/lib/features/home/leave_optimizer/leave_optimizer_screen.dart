@@ -7,7 +7,7 @@ import 'package:homempage/models/leave_status.dart';
 import '../../../models/leave_combo.dart';
 import '../../../services/leave_service.dart';
 import 'widgets/leave_combo_card.dart';
-import 'widgets/leave_calendar_card.dart';
+import 'package:homempage/features/home/leave_optimizer/widgets/leave_calendar_card.dart';
 
 class LeaveOptimizerModal extends StatefulWidget {
   const LeaveOptimizerModal({super.key});
@@ -241,15 +241,7 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
             _buildStatusOption(
               context,
               dateKey,
-              'Normal Working Day',
-              DateStatus.normal,
-              AppTheme.cardBackground,
-              currentStatus,
-            ),
-            _buildStatusOption(
-              context,
-              dateKey,
-              'Busy / High Priority Work',
+              'Busy',
               DateStatus.busy,
               AppTheme.statusBusyBg,
               currentStatus,
@@ -257,17 +249,17 @@ class _LeaveOptimizerModalState extends State<LeaveOptimizerModal> {
             _buildStatusOption(
               context,
               dateKey,
-              'Annual Leave',
-              DateStatus.annualLeave,
-              AppTheme.statusAnnualLeaveBg,
+              'Normal',
+              DateStatus.normal,
+              AppTheme.cardBackground,
               currentStatus,
             ),
             _buildStatusOption(
               context,
               dateKey,
-              'Recommended Bridge Day',
-              DateStatus.recommended,
-              AppTheme.statusRecommendedBg,
+              'Leave Taken',
+              DateStatus.annualLeave,
+              AppTheme.statusAnnualLeaveBg,
               currentStatus,
             ),
           ],

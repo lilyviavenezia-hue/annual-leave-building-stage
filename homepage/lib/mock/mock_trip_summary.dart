@@ -1,125 +1,187 @@
-import 'mock_collaborators.dart';
+// lib/mock/mock_trip_summary.dart
 
-final List<Map<String, dynamic>> mockGroupSuggestionsData = [
-  {
-    "id": "sug_1",
-    "title": "Kiyomizu-dera",
-    "location": "Higashiyama, Kyoto",
-    "category": "GROUP MATCH",
-    "matchPercentage": 94,
-    "imageUrl": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80",
-    "isSaved": false,
+final Map<String, Map<String, dynamic>> mockTripSummaryDatabase = {
+  "group_kyoto_1": {
+    "summary": {
+      "id": "sum_kyoto",
+      "title": "Kyoto Autumn Getaway",
+      "destination": "Kyoto, Japan",
+      "status": "Planning",
+      "dates": "Oct 15 - Oct 22, 2026",
+      "confirmedDetails": {
+        "Flights": "Pending",
+        "Hotel": "Pending"
+      },
+      "completedItems": 5,
+      "totalItems": 7,
+      "pendingDecisions": ["Budget", "Accommodation", "Transport"]
+    },
+    "members": [
+      {
+        "id": "user_me",
+        "name": "You",
+        "avatarUrl": "https://i.pravatar.cc/150?img=11",
+        "role": "Host",
+        "isMe": true,
+        "leaveBalanceSummary": "18 Days Available",
+        "minBudget": 2000,
+        "maxBudget": 5000,
+        "preferences": ["Food", "Culture"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_1",
+        "name": "Sarah Chen",
+        "avatarUrl": "assets/avatars/ski-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 1800,
+        "maxBudget": 4800,
+        "preferences": ["Cafes", "Temple walks"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_2",
+        "name": "Alex Wong",
+        "avatarUrl": "assets/avatars/paris-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 1500,
+        "maxBudget": 4500,
+        "preferences": ["Nightlife"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_3",
+        "name": "Miriam Al-Jamil",
+        "avatarUrl": "assets/avatars/hiking-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 2000,
+        "maxBudget": 5200,
+        "preferences": ["Museums", "Food"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_4",
+        "name": "David Tan",
+        "avatarUrl": "assets/avatars/green-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 1200,
+        "maxBudget": 4200,
+        "preferences": ["Quiet neighborhoods"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      }
+    ],
+    "suggestions": [
+      {
+        "id": "sug_1",
+        "title": "Kiyomizu-dera",
+        "location": "Higashiyama, Kyoto",
+        "category": "Culture",
+        "matchPercentage": 94,
+        "imageUrl": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80"
+      }
+    ]
   },
-  {
-    "id": "sug_2",
-    "title": "Arashiyama",
-    "location": "Ukyo-ku, Kyoto",
-    "category": "GROUP MATCH",
-    "matchPercentage": 88,
-    "imageUrl": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=600&q=80",
-    "isSaved": false,
-  },
-  {
-    "id": "sug_3",
-    "title": "Nishiki Market",
-    "location": "Nakagyo, Kyoto",
-    "category": "FOOD • NIGHTLIFE",
-    "matchPercentage": 82,
-    "imageUrl": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80",
-    "isSaved": false,
-  },
-  {
-    "id": "sug_4",
-    "title": "Fushimi Inari",
-    "location": "Fushimi-ku, Kyoto",
-    "category": "GROUP MATCH",
-    "matchPercentage": 91,
-    "imageUrl": "https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=600&q=80",
-    "isSaved": false,
-  },
-];
 
-final Map<String, dynamic> mockTripSummaryData = {
-  "groupId": "group_kyoto_1",
-  "title": "Kyoto Itinerary",
-  "dates": "Jan 12 - Jan 18, 2026",
-  "destination": "Kyoto, Japan",
-  "budget": "RM1,000 - RM5,000",
-  "progress": 0.71,
-  "completedItems": 5,
-  "totalItems": 7,
-  "pendingDecisions": ["Accommodation", "Transport"],
-  "confirmedDetails": {
-    "Destination": "Kyoto, Japan",
-    "Dates": "Jan 12 - 18",
-    "Duration": "7 days",
-    "Budget": "RM1,000 - RM5,000",
+  "group_bali_2": {
+    "summary": {
+      "id": "sum_bali",
+      "title": "Bali Retreat 2026",
+      "destination": "Bali, Indonesia",
+      "status": "Planning",
+      "dates": "Nov 1 - Nov 7, 2026",
+      "confirmedDetails": {
+        "Flights": "Booked",
+        "Hotel": "Pending"
+      },
+      "completedItems": 4,
+      "totalItems": 7,
+      "pendingDecisions": ["Accommodation", "Activities", "Budget"]
+    }, // <-- REMOVED THE EXTRA }, THAT WAS HERE
+    "members": [
+      {
+        "id": "user_me",
+        "name": "You",
+        "avatarUrl": "https://i.pravatar.cc/150?img=11",
+        "role": "Member",
+        "isMe": true,
+        "minBudget": 1000,
+        "maxBudget": 3000,
+        "preferences": ["Beach", "Relaxation"],
+        "dateRange": "Nov 1 - Nov 7"
+      },
+      {
+        "id": "collab_6",
+        "name": "Sarah Jenkins",
+        "avatarUrl": "https://i.pravatar.cc/150?img=5",
+        "role": "Host",
+        "isMe": false,
+        "minBudget": 1000,
+        "maxBudget": 4000,
+        "preferences": ["Spa", "Food"],
+        "dateRange": "Nov 1 - Nov 7"
+      },
+      {
+        "id": "collab_2",
+        "name": "Alex Wong",
+        "avatarUrl": "assets/avatars/paris-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "minBudget": 1500,
+        "maxBudget": 3500,
+        "preferences": ["Nightlife", "Beach"],
+        "dateRange": "Nov 1 - Nov 7"
+      }
+    ],
+    "suggestions": []
   },
-  "preferenceTags": [
-    "5-star hotel",
-    "no seafood",
-    "prefers transit",
-    "high-efficiency pace",
-    "low-crowd spaces",
-  ],
-  "isReadyToPlan": true,
+
+  "group_seoul_3": {
+    "summary": {
+      "id": "sum_seoul",
+      "title": "Seoul Food & Shopping",
+      "destination": "Seoul, South Korea",
+      "status": "Planning",
+      "dates": "Dec 10 - Dec 18, 2026",
+      "confirmedDetails": {
+        "Flights": "Pending",
+        "Hotel": "Pending"
+      },
+      "completedItems": 2,
+      "totalItems": 7,
+      "pendingDecisions": ["Flights", "Accommodation", "Budget"]
+    },
+    "members": [
+      {
+        "id": "user_me",
+        "name": "You",
+        "avatarUrl": "https://i.pravatar.cc/150?img=11",
+        "role": "Host",
+        "isMe": true,
+        "minBudget": 3000,
+        "maxBudget": 6000,
+        "preferences": ["Shopping", "Food"],
+        "dateRange": "Dec 10 - Dec 18"
+      },
+      {
+        "id": "collab_4",
+        "name": "Mei",
+        "avatarUrl": "https://i.pravatar.cc/150?img=9",
+        "role": "Member",
+        "isMe": false,
+        "minBudget": 2500,
+        "maxBudget": 5000,
+        "preferences": ["Shopping"],
+        "dateRange": "Dec 10 - Dec 18"
+      }
+    ],
+    "suggestions": []
+  }
 };
-
-final List<Map<String, dynamic>> mockGroupMembersData = [
-  {
-    "id": "user_me",
-    "name": "Ying (You)",
-    "role": "Host",
-    "avatarUrl": "assets/avatars/blue-hamster.jpg",
-    "preferences": ["Morning start", "Local street food", "No fast pace"],
-    "leaveBalanceSummary": "14 Days Available",
-    "minBudget": 1000.0,
-    "maxBudget": 5000.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": true,
-  },
-  {
-    ...mockCollaboratorsList[0],
-    "role": "Member",
-    "avatarUrl": mockCollaboratorsList[0]["avatarUrl"],
-    "preferences": ["Local culture", "Food markets"],
-    "leaveBalanceSummary": "9 Days Available",
-    "minBudget": 1200.0,
-    "maxBudget": 4500.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false,
-  },
-  {
-    ...mockCollaboratorsList[1],
-    "role": "Member",
-    "avatarUrl": mockCollaboratorsList[1]["avatarUrl"],
-    "preferences": ["Avoid crowded spots", "City photography"],
-    "leaveBalanceSummary": "8 Days Available",
-    "minBudget": 1500.0,
-    "maxBudget": 4000.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false,
-  },
-  {
-    ...mockCollaboratorsList[2],
-    "role": "Member",
-    "avatarUrl": mockCollaboratorsList[2]["avatarUrl"],
-    "preferences": ["Anime & Museums", "Ramen hunting"],
-    "leaveBalanceSummary": "10 Days Available",
-    "minBudget": 2000.0,
-    "maxBudget": 6000.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false,
-  },
-  {
-    ...mockCollaboratorsList[3],
-    "role": "Member",
-    "avatarUrl": mockCollaboratorsList[3]["avatarUrl"],
-    "preferences": ["Nature walks", "Photography"],
-    "leaveBalanceSummary": "11 Days Available",
-    "minBudget": 1800.0,
-    "maxBudget": 5200.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false,
-  },
-];

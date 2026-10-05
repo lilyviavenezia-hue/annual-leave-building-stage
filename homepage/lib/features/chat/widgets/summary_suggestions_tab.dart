@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../models/attraction.dart';
 import '../../../models/food_option.dart';
+import '../../../models/flight.dart';
 import '../../../models/group_trip_summary.dart';
 import '../../../models/hotel.dart';
 import '../../../services/food_service.dart';
+import '../../../services/flight_service.dart';
 import '../../../services/hotel_service.dart';
 import '../../../services/recommendation_service.dart';
-import 'suggestion_card.dart';
+import '../../../services/favourites_service.dart';
 import 'suggestion_detail.dart';
 
 class SummarySuggestionsTab extends StatefulWidget {
@@ -26,10 +28,13 @@ class SummarySuggestionsTab extends StatefulWidget {
 }
 
 class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
-  String _selectedCategoryFilter = 'All';
+  String _selectedCategoryFilter = 'Favourites';
   List<Attraction> _attractions = [];
   List<FoodOption> _foods = [];
   List<HotelOption> _hotels = [];
+  List<FlightOption> _flights = [];
+  final SuggestionFavoritesService _favoritesService =
+      SuggestionFavoritesService();
   bool _isLoadingItems = true;
 
   @override
@@ -52,51 +57,115 @@ class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
       RecommendationService().getRecommendedAttractions(),
       FoodService().getRecommendedEats(widget.destinationCity),
       HotelService().searchHotels(widget.destinationCity),
+      FlightService().getFlights(),
     ]);
     if (!mounted) return;
     setState(() {
       _attractions = results[0] as List<Attraction>;
       _foods = results[1] as List<FoodOption>;
       _hotels = results[2] as List<HotelOption>;
+      _flights = results[3] as List<FlightOption>;
+      for (final item in [..._attractions, ..._foods, ..._hotels, ..._flights]) {
+        final key = _favouriteKey(item);
+        final saved = _favoritesService.isFavorite(key);
+        if (saved != null) {
+          _setItemFavourite(item, saved);
+        } else {
+          _favoritesService.setFavorite(key, _itemFavourite(item));
+        }
+      }
       _isLoadingItems = false;
     });
   }
 
-  void _toggleSuggestionSaved(GroupSuggestion suggestion) {
-    setState(() => suggestion.isSaved = !suggestion.isSaved);
+  void _toggleAttractionSaved(Attraction attraction) => _toggleItemFavourite(attraction);
+  void _toggleFoodSaved(FoodOption food) => _toggleItemFavourite(food);
+  void _toggleHotelSaved(HotelOption hotel) => _toggleItemFavourite(hotel);
+  void _toggleFlightSaved(FlightOption flight) => _toggleItemFavourite(flight);
+
+  String _favouriteKey(Object item) => switch (item) {
+    Attraction value => 'attraction:${value.id}',
+    FoodOption value => 'food:${value.id}',
+    HotelOption value => 'hotel:${value.id}',
+    FlightOption value => 'flight:${value.id}',
+    _ => throw ArgumentError.value(item, 'item', 'Unsupported suggestion'),
+  };
+
+  bool _itemFavourite(Object item) => switch (item) {
+    Attraction value => value.isFavourite,
+    FoodOption value => value.isFavourite,
+    HotelOption value => value.isFavourite,
+    FlightOption value => value.isFavourite,
+    _ => false,
+  };
+
+  void _setItemFavourite(Object item, bool isFavourite) {
+    switch (item) {
+      case Attraction value:
+        value.isFavourite = isFavourite;
+        break;
+      case FoodOption value:
+        value.isFavourite = isFavourite;
+        break;
+      case HotelOption value:
+        value.isFavourite = isFavourite;
+        break;
+      case FlightOption value:
+        value.isFavourite = isFavourite;
+        break;
+    }
   }
 
-  void _toggleAttractionSaved(Attraction attraction) {
-    setState(() => attraction.isFavourite = !attraction.isFavourite);
+  void _toggleItemFavourite(Object item) {
+    setState(() {
+      final key = _favouriteKey(item);
+      final isSaved = !_itemFavourite(item);
+      _setItemFavourite(item, isSaved);
+      _favoritesService.setFavorite(key, isSaved);
+    });
   }
 
-  void _toggleFoodSaved(FoodOption food) {
-    setState(() => food.isFavourite = !food.isFavourite);
+  _SuggestionEntry _entryFor(Object item) => switch (item) {
+    Attraction value => _SuggestionEntry(item: value, title: value.title, imageUrl: value.imageUrl, category: 'Attraction', details: [
+      DetailField('Highlights', value.tags.join(' · ')), DetailField('Hours', value.openingHours), DetailField('Location', value.location), DetailField('Fee', value.price), DetailField('Rating', '${value.rating.toStringAsFixed(1)} / 5'),
+    ]),
+    FoodOption value => _SuggestionEntry(item: value, title: value.name, imageUrl: value.imageUrl, category: 'Restaurant', details: [
+      DetailField('Cuisine', value.cuisineType), DetailField('Menu', value.menuItems.join(' · ')), DetailField('Price', value.price), DetailField('Hours', value.openingHours), DetailField('Location', value.location), DetailField('About', value.description), DetailField('Rating', '${value.rating.toStringAsFixed(1)} / 5 · ${value.reviewCount} reviews'),
+    ]),
+    HotelOption value => _SuggestionEntry(item: value, title: value.name, imageUrl: value.imageUrl, category: 'Stay', details: [
+      DetailField('Rooms', value.roomTypes.join(' · ')), DetailField('Amenities', value.amenities.join(' · ')), DetailField('Price', value.pricePerNightFormatted), DetailField('Rating', '${value.rating.toStringAsFixed(1)} / 5'), DetailField('Check-in', value.checkInTime), DetailField('Check-out', value.checkOutTime), DetailField('Location', value.location),
+    ]),
+    FlightOption value => _SuggestionEntry(item: value, title: value.airlineName, imageUrl: value.airlineLogoUrl, category: 'Flight', details: [
+      DetailField('Airline', value.airlineName), DetailField('Route', value.route), DetailField('Times', '${value.departureTime} – ${value.arrivalTime}'), DetailField('Duration', value.duration), DetailField('Stops', value.stops), DetailField('Baggage', value.baggage), DetailField('Fare', value.priceFormatted),
+    ]),
+    _ => throw ArgumentError.value(item, 'item', 'Unsupported suggestion'),
+  };
+
+  void _showItemDetail(_SuggestionEntry entry) {
+    Navigator.push(context, MaterialPageRoute<void>(builder: (_) => SuggestionDetailPage(
+      title: entry.title, imageUrl: entry.imageUrl, category: entry.category, details: entry.details,
+      isFavourite: _itemFavourite(entry.item), onToggleFavourite: () => _toggleItemFavourite(entry.item),
+    )));
   }
 
-  void _toggleHotelSaved(HotelOption hotel) {
-    setState(() => hotel.isFavourite = !hotel.isFavourite);
-  }
-
+  Widget _tappableCard(Widget child, Object item) => Material(
+    color: Colors.transparent,
+    child: InkWell(onTap: () => _showItemDetail(_entryFor(item)), borderRadius: BorderRadius.circular(16), child: child),
+  );
   Widget _buildFavouriteButton({
     required bool isFavourite,
     required VoidCallback onPressed,
   }) {
-    return ElevatedButton.icon(
+    return IconButton(
       onPressed: onPressed,
-      icon: Icon(
-        isFavourite ? Icons.favorite : Icons.favorite_border,
-        size: 16,
-      ),
-      label: Text(isFavourite ? 'Saved' : 'Favourite'),
-      style: ElevatedButton.styleFrom(
+      tooltip: isFavourite ? 'Saved' : 'Favourite',
+      icon: Icon(isFavourite ? Icons.favorite : Icons.favorite_border),
+      style: IconButton.styleFrom(
         foregroundColor: isFavourite ? Colors.white : AppTheme.primaryGreen,
         backgroundColor: isFavourite ? AppTheme.primaryGreen : Colors.white,
         side: const BorderSide(color: AppTheme.primaryGreen),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        elevation: 0,
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        padding: const EdgeInsets.all(10),
       ),
     );
   }
@@ -317,154 +386,119 @@ class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
     );
   }
 
-  Widget _buildCombinedFavouriteList() {
-    final attractions = _attractions.where((item) => item.isFavourite).toList();
-    final foods = _foods.where((item) => item.isFavourite).toList();
-    final hotels = _hotels.where((item) => item.isFavourite).toList();
+  Widget _buildFlightCard(FlightOption item) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+    child: Row(children: [
+      ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(item.airlineLogoUrl, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 72, height: 72, color: const Color(0xFFE8F5E9), child: const Icon(Icons.flight, color: AppTheme.primaryGreen)))),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(item.airlineName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+        const SizedBox(height: 4),
+        Text(item.route, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        const SizedBox(height: 6),
+        Text('${item.priceFormatted} · ${item.duration} · ${item.stops}', style: const TextStyle(fontSize: 12, color: AppTheme.primaryGreen, fontWeight: FontWeight.w600)),
+      ])),
+      _buildFavouriteButton(isFavourite: item.isFavourite, onPressed: () => _toggleFlightSaved(item)),
+    ]),
+  );
 
-    final items = [
-      ...attractions.map((item) => {'type': 'attraction', 'item': item}),
-      ...foods.map((item) => {'type': 'food', 'item': item}),
-      ...hotels.map((item) => {'type': 'hotel', 'item': item}),
+  List<Object> get _allItems {
+    final items = <Object>[
+      ..._attractions,
+      ..._foods,
+      ..._hotels,
+      ..._flights,
     ];
-
-    if (items.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Text('No favourite suggestions yet.'),
-        ),
+    // Put group-curated picks first when they match a richer category model.
+    for (final suggestion in widget.suggestions.reversed) {
+      final index = items.indexWhere(
+        (item) =>
+            _entryFor(item).title.toLowerCase() ==
+            suggestion.title.toLowerCase(),
       );
+      if (index > 0) items.insert(0, items.removeAt(index));
     }
+    return items;
+  }
 
+  Widget _buildAllSuggestionsList() => _buildItemList(_allItems);
+
+  Widget _buildCombinedFavouriteList() => _buildItemList(_allItems.where(_itemFavourite).toList(), emptyMessage: 'No favourite suggestions yet.');
+
+  Widget _buildItemList(List<Object> items, {String emptyMessage = 'No suggestions available.'}) {
+    if (items.isEmpty) return Center(child: Padding(padding: const EdgeInsets.all(20), child: Text(emptyMessage)));
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final entry = items[index];
-        final type = entry['type'] as String;
-        if (type == 'attraction') {
-          return _buildAttractionCard(entry['item'] as Attraction);
-        }
-        if (type == 'food') {
-          return _buildFoodCard(entry['item'] as FoodOption);
-        }
-        return _buildHotelCard(entry['item'] as HotelOption);
+      itemBuilder: (_, index) {
+        final item = items[index];
+        final card = switch (item) {
+          Attraction value => _buildAttractionCard(value),
+          FoodOption value => _buildFoodCard(value),
+          HotelOption value => _buildHotelCard(value),
+          FlightOption value => _buildFlightCard(value),
+          _ => const SizedBox.shrink(),
+        };
+        return _tappableCard(card, item);
       },
     );
   }
 
   Widget _buildListFromCategory(String category) {
-    if (_isLoadingItems) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    switch (category) {
-      case 'Attractions':
-        if (_attractions.isEmpty) {
-          return const Center(
-            child: Text('No attraction suggestions available.'),
-          );
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          itemCount: _attractions.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) =>
-              _buildAttractionCard(_attractions[index]),
-        );
-      case 'Restaurants':
-        if (_foods.isEmpty) {
-          return const Center(
-            child: Text('No restaurant suggestions available.'),
-          );
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          itemCount: _foods.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => _buildFoodCard(_foods[index]),
-        );
-      case 'Stays':
-        if (_hotels.isEmpty) {
-          return const Center(child: Text('No stay suggestions available.'));
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          itemCount: _hotels.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => _buildHotelCard(_hotels[index]),
-        );
-      case 'Favourites':
-        return _buildCombinedFavouriteList();
-      case 'All':
-      default:
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-          itemCount: widget.suggestions.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
-          itemBuilder: (context, index) {
-            final item = widget.suggestions[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SuggestionDetailModal(suggestion: item),
-                  ),
-                );
-              },
-              child: SuggestionCard(
-                suggestion: item,
-                onToggleFavorite: () => _toggleSuggestionSaved(item),
-              ),
-            );
-          },
-        );
-    }
+    if (_isLoadingItems) return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+    return switch (category) {
+      'Attractions' => _buildItemList(_attractions),
+      'Restaurants' => _buildItemList(_foods),
+      'Stays' => _buildItemList(_hotels),
+      'Flights' => _buildItemList(_flights),
+      'Favourites' => _buildCombinedFavouriteList(),
+      _ => _buildAllSuggestionsList(),
+    };
   }
-
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      'All',
-      'Attractions',
-      'Restaurants',
-      'Stays',
-      'Favourites',
-    ];
+    final categories = <String, IconData>{
+      'Favourites': Icons.favorite,
+      'Attractions': Icons.location_on,
+      'Restaurants': Icons.restaurant,
+      'Stays': Icons.bed,
+      'Flights': Icons.flight,
+    };
 
     return Column(
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           child: Row(
-            children: categories.map((cat) {
+            children: categories.entries.map((category) {
+              final cat = category.key;
               final isSelected = _selectedCategoryFilter == cat;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: ChoiceChip(
-                  label: Text(cat),
-                  selected: isSelected,
-                  selectedColor: AppTheme.primaryGreen,
-                  backgroundColor: AppTheme.cardBackground,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textMuted,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                  onSelected: (_) =>
-                      setState(() => _selectedCategoryFilter = cat),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: BorderSide.none,
+              return Expanded(
+                child: Center(
+                  child: ChoiceChip(
+                    label: Icon(
+                      category.value,
+                      size: 18,
+                      semanticLabel: cat,
+                    ),
+                    tooltip: cat,
+                    selected: isSelected,
+                    showCheckmark: false,
+                    selectedColor: AppTheme.primaryGreen,
+                    backgroundColor: AppTheme.cardBackground,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : AppTheme.textMuted,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _selectedCategoryFilter = cat),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      side: BorderSide.none,
+                    ),
                   ),
                 ),
               );
@@ -476,4 +510,20 @@ class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
       ],
     );
   }
+}
+
+class _SuggestionEntry {
+  final Object item;
+  final String title;
+  final String imageUrl;
+  final String category;
+  final List<DetailField> details;
+
+  const _SuggestionEntry({
+    required this.item,
+    required this.title,
+    required this.imageUrl,
+    required this.category,
+    required this.details,
+  });
 }

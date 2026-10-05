@@ -4,6 +4,7 @@ final Map<String, dynamic> mockChatListData = {
   "invitations": [
     {
       "id": "inv_1",
+      "groupId": "group_tokyo_1",
       "hostName": "Sarah Jenkins",
       "hostAvatar": "https://i.pravatar.cc/150?img=5",
       "tripTitle": "Tokyo Spring Blossom",

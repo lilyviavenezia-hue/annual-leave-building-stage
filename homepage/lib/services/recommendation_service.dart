@@ -17,4 +17,14 @@ class RecommendationService {
         .map((json) => Attraction.fromJson(json))
         .toList();
   }
+
+  Future<bool> setAttractionFavourite(String id, bool isFavourite) {
+    final attraction = mockRecommendedAttractions.where(
+      (item) => item['id'] == id,
+    );
+    if (attraction.isEmpty) return Future.value(false);
+
+    attraction.first['is_favourite'] = isFavourite;
+    return Future.value(true);
+  }
 }

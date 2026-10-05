@@ -29,6 +29,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "RM 106",
     "tags": ["Nature", "Sakura", "Temple"],
     "rating": 5.0,
+    "opening_hours": "6:00 AM – 6:00 PM",
     "image_url": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -38,6 +39,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "Free",
     "tags": ["Nature", "Aesthetic", "Cultural"],
     "rating": 4.8,
+    "opening_hours": "Open 24 hours",
     "image_url": "https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -47,6 +49,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "Free",
     "tags": ["Architecture", "Heritage"],
     "rating": 4.9,
+    "opening_hours": "Open 24 hours",
     "image_url": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -56,6 +59,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "RM 20",
     "tags": ["Temple", "History", "Garden"],
     "rating": 4.9,
+    "opening_hours": "9:00 AM – 5:00 PM",
     "image_url": "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -65,6 +69,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "Free",
     "tags": ["Nature", "Scenic"],
     "rating": 4.8,
+    "opening_hours": "Open 24 hours",
     "image_url": "https://images.unsplash.com/photo-1528164344705-47542687000d?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -74,6 +79,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "Free",
     "tags": ["Food", "Shopping"],
     "rating": 4.7,
+    "opening_hours": "9:00 AM – 6:00 PM",
     "image_url": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -83,6 +89,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "RM 45",
     "tags": ["History", "UNESCO"],
     "rating": 4.8,
+    "opening_hours": "8:45 AM – 5:00 PM",
     "image_url": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -92,6 +99,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "Free",
     "tags": ["Walk", "Sakura", "Nature"],
     "rating": 4.7,
+    "opening_hours": "Open 24 hours",
     "image_url": "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -101,6 +109,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "RM 85",
     "tags": ["Temple", "Culture"],
     "rating": 4.8,
+    "opening_hours": "8:30 AM – 5:00 PM",
     "image_url": "https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=800&q=80",
   },
   {
@@ -110,6 +119,7 @@ final List<Map<String, dynamic>> mockRecommendedAttractions = [
     "price": "Free",
     "tags": ["Shrine", "Heritage"],
     "rating": 4.7,
+    "opening_hours": "Open 24 hours",
     "image_url": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=800&q=80",
   },
 ];

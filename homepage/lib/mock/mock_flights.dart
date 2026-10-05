@@ -21,6 +21,9 @@ final mockFlightSearchResults = {
       "flight_type": "Direct · MH52",
       "terminal": "Terminal 1",
       "price_formatted": "RM1450",
+      "route": "Kuala Lumpur (KUL) → Osaka (KIX)",
+      "stops": "Direct",
+      "baggage": "Checked baggage included",
       "booking_url": "https://www.malaysiaairlines.com"
     },
     {
@@ -33,6 +36,9 @@ final mockFlightSearchResults = {
       "flight_type": "1 stop · SIN",
       "terminal": "Terminal 2",
       "price_formatted": "RM1520",
+      "route": "Kuala Lumpur (KUL) → Osaka (KIX)",
+      "stops": "1 stop · Singapore (SIN)",
+      "baggage": "Checked baggage included",
       "booking_url": "https://www.singaporeair.com"
     },
     {
@@ -45,6 +51,9 @@ final mockFlightSearchResults = {
       "flight_type": "Direct · D7532",
       "terminal": "Terminal 2",
       "price_formatted": "RM1888",
+      "route": "Kuala Lumpur (KUL) → Osaka (KIX)",
+      "stops": "Direct",
+      "baggage": "Cabin baggage included",
       "booking_url": "https://www.airasia.com"
     }
   ]
