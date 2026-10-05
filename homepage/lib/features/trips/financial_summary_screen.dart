@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../features/chat/receipt_scanner_screen.dart';
+import '../../features/chat/scanned_receipt_screen.dart';
 import '../../models/budget.dart';
 import '../../models/receipt.dart';
 import '../../models/trip.dart';
@@ -26,14 +27,15 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
   final ExpenseService _expenseService = ExpenseService();
   late final Future<TripBudgetEstimate> _estimateFuture;
   late final Future<List<Receipt>> _receiptsFuture;
+  late final Future<Receipt> _peopleReceiptFuture;
   int _selectedPage = 0;
-  int _selectedExpenseTab = 0;
 
   @override
   void initState() {
     super.initState();
     _estimateFuture = _loadEstimate();
     _receiptsFuture = _expenseService.getRecentReceipts();
+    _peopleReceiptFuture = _expenseService.getScannedReceipt();
   }
 
   Future<TripBudgetEstimate> _loadEstimate() async {
@@ -100,7 +102,7 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
                     const SizedBox(width: 4),
                     const Expanded(
                       child: Text(
-                        'Budget and Expenses',
+                        'Financial Summary',
                         style: TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.w800,
@@ -110,25 +112,27 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                _SegmentControl(
-                  labels: const ['Budget summary', 'Expenses'],
+                _buildBudgetSummary(estimate),
+                const SizedBox(height: 14),
+                _SummarySectionTabs(
                   selectedIndex: _selectedPage,
                   onSelected: (index) => setState(() => _selectedPage = index),
                 ),
                 const SizedBox(height: 14),
-                if (_selectedPage == 0)
-                  _buildBudgetSummary(estimate)
-                else
-                  _buildExpenses(estimate),
-                const SizedBox(height: 12),
-                const Text(
-                  'Estimates are based on this trip’s duration, traveller count, and planned budget. Actual costs may vary.',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 11,
-                    height: 1.4,
+                if (_selectedPage == 0) ...[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(4, 2, 4, 10),
+                    child: Text(
+                      'People',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
+                  _buildPeople(),
+                ] else
+                  _buildRecentReceipts(),
               ],
             );
           },
@@ -140,83 +144,17 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
   Widget _buildBudgetSummary(TripBudgetEstimate estimate) {
     final total = estimate.estimatedTotal;
     final remaining = estimate.remainingBudget;
-    final withinBudget = remaining >= 0;
+    final progress = estimate.budgetProgress;
     return Column(
       children: [
         _SummaryCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Total estimated cost',
-                style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
-              ),
-              const SizedBox(height: 3),
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      _money(total),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1D3B32),
-                      ),
-                    ),
-                  ),
-                  _Badge(
-                    label: withinBudget ? 'On budget' : 'Over budget',
-                    background: withinBudget
-                        ? const Color(0xFFE8F7EE)
-                        : const Color(0xFFFFEEEE),
-                    foreground: withinBudget
-                        ? const Color(0xFF168541)
-                        : Colors.red,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MetricCard(
-                      label: 'Estimated per person',
-                      value: _money(estimate.costPerPerson),
-                      note: '${estimate.travellerCount} people',
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _MetricCard(
-                      label: 'Planned budget',
-                      value: _money(estimate.plannedBudget),
-                      note: '${estimate.durationDays} days',
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _MetricCard(
-                      label: withinBudget
-                          ? 'Budget remaining'
-                          : 'Over budget by',
-                      value: _money(remaining.abs()),
-                      note: 'Estimated',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        _SummaryCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
+                    child: const Text(
                       'Budget progress',
                       style: TextStyle(
                         fontSize: 14,
@@ -225,7 +163,7 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
                     ),
                   ),
                   Text(
-                    '${(estimate.budgetProgress * 100).round()}%',
+                    '${(progress * 100).round()}%',
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -238,13 +176,13 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
-                  value: estimate.budgetProgress,
+                  value: progress,
                   minHeight: 7,
                   backgroundColor: const Color(0xFFE8ECE9),
-                  color: withinBudget ? const Color(0xFF25C45A) : Colors.red,
+                  color: AppTheme.primaryGreen,
                 ),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -257,7 +195,7 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
                     ),
                   ),
                   Text(
-                    '${estimate.durationDays} days · ${estimate.travellerCount} people',
+                    'Remaining ${_money(remaining.abs())}',
                     style: const TextStyle(
                       fontSize: 10,
                       color: AppTheme.textMuted,
@@ -265,186 +203,112 @@ class _FinancialSummaryScreenState extends State<FinancialSummaryScreen> {
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        _categoryBreakdown(estimate),
-      ],
-    );
-  }
-
-  Widget _buildExpenses(TripBudgetEstimate estimate) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _ExpenseAction(
-                icon: Icons.camera_alt_outlined,
-                label: 'Scan Receipt',
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) =>
-                        ReceiptScannerScreen(groupId: widget.tripId),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: _ExpenseAction(
-                icon: Icons.image_outlined,
-                label: 'Upload Gallery',
-                onPressed: _uploadReceipt,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        _SegmentControl(
-          labels: const ['Line items', 'Recent receipts'],
-          selectedIndex: _selectedExpenseTab,
-          onSelected: (index) => setState(() => _selectedExpenseTab = index),
-        ),
-        const SizedBox(height: 14),
-        if (_selectedExpenseTab == 0) ...[
-          _SummaryCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Budget summary',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                _amountLine('Estimated total', estimate.estimatedTotal),
-                const SizedBox(height: 5),
-                _amountLine(
-                  'Budget remaining',
-                  estimate.remainingBudget,
-                  positive: estimate.remainingBudget >= 0,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              'Line items',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (final item in estimate.categories) _ExpenseLineItem(item: item),
-        ] else
-          FutureBuilder<List<Receipt>>(
-            future: _receiptsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError || !snapshot.hasData) {
-                return const Text('Unable to load recent receipts.');
-              }
-              final receipts = snapshot.data!;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 10),
+              Row(
                 children: [
-                  const Text(
-                    'Recent Receipts',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
-                  for (final receipt in receipts)
-                    _ReceiptCard(receipt: receipt),
-                ],
-              );
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _categoryBreakdown(TripBudgetEstimate estimate) {
-    return _SummaryCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Category breakdown',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Text(
-                'Estimated',
-                style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          for (final item in estimate.categories)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: item.color,
-                      shape: BoxShape.circle,
+                  Expanded(
+                    child: _MetricCard(
+                      label: 'Budget',
+                      value: _money(estimate.plannedBudget),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      item.category,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    _money(item.amount),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    child: _MetricCard(
+                      label: remaining >= 0 ? 'Buffer' : 'Over budget by',
+                      value: _money(remaining.abs()),
                     ),
                   ),
                 ],
               ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _amountLine(String label, double amount, {bool positive = false}) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-          ),
-        ),
-        Text(
-          _money(amount.abs()),
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: positive ? AppTheme.primaryGreen : AppTheme.textDark,
+            ],
           ),
         ),
       ],
     );
   }
+
+  Widget _buildPeople() => FutureBuilder<Receipt>(
+    future: _peopleReceiptFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snapshot.hasError || !snapshot.hasData) {
+        return const Text('Unable to load trip members.');
+      }
+      final receipt = snapshot.data!;
+      return Column(
+        children: [
+          for (final member in receipt.memberSplits)
+            _PersonExpenseCard(
+              member: member,
+              total: receipt.totalAmount * member.splitPercentage / 100,
+            ),
+        ],
+      );
+    },
+  );
+
+  Widget _buildRecentReceipts() => FutureBuilder<List<Receipt>>(
+    future: _receiptsFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snapshot.hasError || !snapshot.hasData) {
+        return const Text('Unable to load recent receipts.');
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _ExpenseAction(
+                  icon: Icons.camera_alt_outlined,
+                  label: 'Scan Receipt',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          ReceiptScannerScreen(groupId: widget.tripId),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _ExpenseAction(
+                  icon: Icons.image_outlined,
+                  label: 'Upload Gallery',
+                  onPressed: _uploadReceipt,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(4, 2, 4, 10),
+            child: Text(
+              'Recent Receipts',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          for (final receipt in snapshot.data!)
+            _ReceiptCard(
+              receipt: receipt,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ScannedReceiptScreen(
+                    groupId: widget.tripId,
+                    initialReceipt: receipt,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
 
   String _money(double amount) => 'RM ${amount.round()}';
 }
@@ -467,11 +331,10 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value, this.note});
+  const _MetricCard({required this.label, required this.value});
 
   final String label;
   final String value;
-  final String? note;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -503,99 +366,55 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
         ),
-        if (note != null)
-          Text(
-            note!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 8, color: AppTheme.textMuted),
-          ),
       ],
     ),
   );
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-    decoration: BoxDecoration(
-      color: background,
-      borderRadius: BorderRadius.circular(18),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        color: foreground,
-        fontSize: 9,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  );
-}
-
-class _SegmentControl extends StatelessWidget {
-  const _SegmentControl({
-    required this.labels,
+class _SummarySectionTabs extends StatelessWidget {
+  const _SummarySectionTabs({
     required this.selectedIndex,
     required this.onSelected,
   });
 
-  final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(4),
+    padding: const EdgeInsets.all(5),
     decoration: BoxDecoration(
       color: const Color(0xFFF0F2F1),
-      borderRadius: BorderRadius.circular(11),
+      borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
       children: [
-        for (var index = 0; index < labels.length; index++)
+        for (final (index, icon) in [
+          (0, Icons.person_outline_rounded),
+          (1, Icons.receipt_long_outlined),
+        ])
           Expanded(
-            child: GestureDetector(
-              onTap: () => onSelected(index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: selectedIndex == index
+            child: Semantics(
+              button: true,
+              label: index == 0 ? 'People' : 'Receipts',
+              selected: selectedIndex == index,
+              child: IconButton(
+                tooltip: index == 0 ? 'People' : 'Receipts',
+                onPressed: () => onSelected(index),
+                style: IconButton.styleFrom(
+                  backgroundColor: selectedIndex == index
                       ? Colors.white
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: selectedIndex == index
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 4,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  labels[index],
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: selectedIndex == index
-                        ? AppTheme.primaryGreen
-                        : AppTheme.textMuted,
+                  foregroundColor: selectedIndex == index
+                      ? AppTheme.primaryGreen
+                      : AppTheme.textMuted,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  minimumSize: const Size.fromHeight(40),
+                  elevation: selectedIndex == index ? 1 : 0,
                 ),
+                icon: Icon(icon, size: 18),
               ),
             ),
           ),
@@ -632,89 +451,132 @@ class _ExpenseAction extends StatelessWidget {
   );
 }
 
-class _ExpenseLineItem extends StatelessWidget {
-  const _ExpenseLineItem({required this.item});
-
-  final BudgetItem item;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF3F3F7),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.category,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 3),
-              const Text(
-                'Estimated from your trip plan',
-                style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
-              ),
-            ],
-          ),
-        ),
-        Text(
-          'RM ${item.amount.round()}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(width: 8),
-        const _Badge(
-          label: 'Est.',
-          background: Color(0xFFE5E6EA),
-          foreground: AppTheme.textMuted,
-        ),
-      ],
-    ),
-  );
-}
-
 class _ReceiptCard extends StatelessWidget {
-  const _ReceiptCard({required this.receipt});
+  const _ReceiptCard({required this.receipt, required this.onTap});
 
   final Receipt receipt;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF3F3F7),
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.receipt_long_outlined, color: AppTheme.primaryGreen),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                receipt.merchantName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                receipt.timestamp,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    final isSettled = receipt.timestamp.toLowerCase().contains('settled');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F3F7),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        receipt.merchantName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        receipt.timestamp.split('·').first.trim(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isSettled
+                                  ? AppTheme.primaryGreen
+                                  : const Color(0xFFFF3030),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isSettled ? 'Settled' : 'Pending split',
+                            style: TextStyle(
+                              color: isSettled
+                                  ? AppTheme.primaryGreen
+                                  : const Color(0xFFFF3030),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'RM ${receipt.totalAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
         ),
-        Text(
-          'RM ${receipt.totalAmount.toStringAsFixed(2)}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
+}
+
+class _PersonExpenseCard extends StatelessWidget {
+  const _PersonExpenseCard({required this.member, required this.total});
+
+  final ReceiptMemberSplit member;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color(member.colorHex);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7F6),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE9ECEA)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: color,
+            child: Text(
+              member.id,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              member.name,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            'RM ${total.toStringAsFixed(2)}',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
 }

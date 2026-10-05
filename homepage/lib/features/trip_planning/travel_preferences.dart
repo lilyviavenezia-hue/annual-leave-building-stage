@@ -1,9 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../itinerary/itinerary_overview_screen.dart';
 import '../../models/trip.dart';
+import '../../models/travel_preference.dart';
+import '../../core/theme/app_theme.dart';
+import '../../services/itinerary_service.dart';
 import '../../services/preference_service.dart';
+import '../../services/trip_service.dart';
 import 'trip_planning_screen.dart'
     show DefaultPreferencesOverlay, TripCustomizationSwipeOverlay;
 import 'widgets/preference_action_card.dart';
@@ -14,17 +18,21 @@ class TravelPreferencesScreen extends StatefulWidget {
   const TravelPreferencesScreen({
     super.key,
     this.tripDraft,
+    this.preferenceService,
   });
 
   final Trip? tripDraft;
+  final PreferenceService? preferenceService;
 
   @override
-  State<TravelPreferencesScreen> createState() => _TravelPreferencesScreenState();
+  State<TravelPreferencesScreen> createState() =>
+      _TravelPreferencesScreenState();
 }
 
 class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
-  final PreferenceService _preferenceService = PreferenceService();
+  late final PreferenceService _preferenceService;
   final TextEditingController _transcriptController = TextEditingController();
+  late TravelPreference _travelPreference;
 
   bool _isLoading = true;
   bool _isRecording = false;
@@ -32,6 +40,7 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
   @override
   void initState() {
     super.initState();
+    _preferenceService = widget.preferenceService ?? PreferenceService();
     _loadPreferences();
   }
 
@@ -39,6 +48,7 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
     final prefs = await _preferenceService.getPreferences();
     if (!mounted) return;
     setState(() {
+      _travelPreference = prefs;
       _transcriptController.text = prefs.transcript;
       _isLoading = false;
     });
@@ -68,9 +78,8 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => DefaultPreferencesOverlay(
-        transcript: _transcriptController.text,
-      ),
+      builder: (_) =>
+          DefaultPreferencesOverlay(transcript: _transcriptController.text),
     );
   }
 
@@ -97,14 +106,61 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
     );
   }
 
-  void _generateItinerary() {
-    final generatedItineraryId = DateTime.now()
-        .toUtc()
-        .toIso8601String()
-        .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
-        .toLowerCase();
+  bool _isGenerating = false;
 
-    context.push('/home/itinerary', extra: generatedItineraryId);
+  Future<void> _generateItinerary() async {
+    final trip =
+        widget.tripDraft ??
+        Trip(
+          id: 'TRIP_${DateTime.now().millisecondsSinceEpoch}',
+          destination: 'Kyoto, Japan',
+          dateRange: '12 - 18 October 2026',
+          duration: '6 days',
+          budget: 'RM 3,000 budget',
+          imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1000&auto=format&fit=crop',
+          status: 'draft',
+          travellerCount: 4,
+          plannedBudget: 3000,
+        );
+    setState(() => _isGenerating = true);
+    try {
+      final generatedItinerary = await _preferenceService.generateItinerary(
+        trip: trip,
+        preference: _travelPreference.copyWith(
+          transcript: _transcriptController.text.trim(),
+        ),
+      );
+      if (!mounted) return;
+      if (generatedItinerary.overview.id != trip.id) {
+        throw const FormatException(
+          'The generated itinerary does not match the submitted trip.',
+        );
+      }
+      ItineraryService.saveGeneratedItinerary(generatedItinerary);
+      final generatedTrip = trip.copyWith(
+        estimatedBudget: generatedItinerary.estimatedBudget,
+        budgetBreakdown: generatedItinerary.budgetBreakdown,
+      );
+      await TripService().saveDraft(generatedTrip);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ItineraryOverviewScreen(
+            itineraryId: generatedTrip.id,
+            initialTrip: generatedTrip.copyWith(status: 'draft'),
+            generatedItinerary: generatedItinerary,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to generate itinerary: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
   }
 
   @override
@@ -178,7 +234,7 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _generateItinerary,
+                  onPressed: _isGenerating ? null : _generateItinerary,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryGreen,
                     elevation: 0,
@@ -186,19 +242,38 @@ class _TravelPreferencesScreenState extends State<TravelPreferencesScreen> {
                       borderRadius: BorderRadius.circular(26),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.star_rate_rounded, color: Colors.white, size: 20),
-                      SizedBox(width: 6),
-                      Text(
-                        'Generate my itinerary',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      if (_isGenerating)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      else ...[
+                        const Icon(
+                          Icons.star_rate_rounded,
                           color: Colors.white,
+                          size: 20,
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                        const Flexible(
+                          child: Text(
+                            'Generate my itinerary',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

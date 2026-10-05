@@ -825,7 +825,12 @@ class _TripBookingBudgetScreenState extends State<TripBookingBudgetScreen> {
                           ),
                         ),
                         Text(
-                          line.isSelected ? 'Selected option' : 'Estimated',
+                          line.isSelected
+                              ? 'Selected option'
+                              : line.category == 'Flights' ||
+                                    line.category == 'Accommodation'
+                              ? 'Not yet booked'
+                              : 'Estimated',
                           style: const TextStyle(
                             color: AppTheme.textMuted,
                             fontSize: 9,
@@ -871,7 +876,7 @@ class _TripBookingBudgetScreenState extends State<TripBookingBudgetScreen> {
                         strokeWidth: 2,
                       ),
                     )
-                  : const Text('Confirm trip'),
+                  : const Text('Done'),
             ),
           ),
         ],
@@ -889,57 +894,82 @@ class TripConfirmedScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
     body: SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 74,
-                height: 74,
-                decoration: const BoxDecoration(
-                  color: AppTheme.primaryGreen,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  size: 42,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Your trip is confirmed!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Everything is ready for your journey to ${trip.destination.split(',').first}.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: ElevatedButton(
-                  onPressed: () => context.go('/trips'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen,
-                    foregroundColor: Colors.white,
+      child: Stack(
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 74,
+                    height: 74,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.primaryGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 42,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: const Text('View my trips'),
-                ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Your trip is confirmed!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Everything is ready for your journey to ${trip.destination.split(',').first}.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final router = GoRouter.of(context);
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
+                        router.go('/trips');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('View my trips'),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              tooltip: 'Close',
+              onPressed: () {
+                final router = GoRouter.of(context);
+                Navigator.of(context).popUntil((route) => route.isFirst);
+                router.go('/home');
+              },
+              icon: const Icon(Icons.close, color: AppTheme.textDark),
+            ),
+          ),
+        ],
       ),
     ),
   );

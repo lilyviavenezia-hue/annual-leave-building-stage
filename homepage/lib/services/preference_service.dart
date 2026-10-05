@@ -1,12 +1,15 @@
 import '../core/api/api_client.dart';
 import '../mock/mock_preferences.dart';
+import '../models/itinerary.dart';
 import '../models/travel_preference.dart';
+import '../models/trip.dart';
 import '../models/trip_customization.dart';
 
 class PreferenceService {
-  final ApiClient? apiClient;
+  final ApiClient _apiClient;
 
-  PreferenceService({this.apiClient});
+  PreferenceService({ApiClient? apiClient})
+    : _apiClient = apiClient ?? ApiClient();
 
   // --- Travel Preferences Methods ---
 
@@ -22,11 +25,15 @@ class PreferenceService {
     return true;
   }
 
-  Future<bool> generateItinerary(TravelPreference preference) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    // FUTURE PYTHON BACKEND CALL:
-    // await apiClient!.post('/api/itinerary/generate', preference.toJson());
-    return true;
+  Future<GeneratedItinerary> generateItinerary({
+    required Trip trip,
+    required TravelPreference preference,
+  }) async {
+    final response = await _apiClient.post('/api/itinerary/generate', {
+      'trip': trip.toJson(),
+      'preferences': preference.toJson(),
+    });
+    return GeneratedItinerary.fromJson(response);
   }
 
   // --- Swipe / Trip Customization Methods ---

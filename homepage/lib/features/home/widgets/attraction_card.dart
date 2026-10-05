@@ -1,72 +1,245 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_theme.dart';
 import '../../../models/attraction.dart';
 
 class AttractionCard extends StatelessWidget {
   final String title;
   final String location;
   final String imageUrl;
+  final String price;
+  final List<String> tags;
+  final double rating;
+  final bool isFavorite;
+  final VoidCallback onFavorite;
 
   const AttractionCard({
     super.key,
     required this.title,
     required this.location,
     required this.imageUrl,
+    this.price = 'Free',
+    this.tags = const [],
+    this.rating = 4.8,
+    this.isFavorite = false,
+    this.onFavorite = _noop,
   });
 
-  /// Factory constructor to easily create card from an Attraction model
-  factory AttractionCard.fromModel({
-    Key? key,
-    required Attraction attraction,
+  static void _noop() {}
+
+  factory AttractionCard.fromModel(
+    Attraction attraction, {
+    bool? isFavorite,
+    VoidCallback? onFavorite,
   }) {
     return AttractionCard(
-      key: key,
       title: attraction.title,
       location: attraction.location,
       imageUrl: attraction.imageUrl,
+      price: attraction.price,
+      tags: attraction.tags,
+      rating: attraction.rating,
+      isFavorite: isFavorite ?? attraction.isFavourite,
+      onFavorite: onFavorite ?? _noop,
+    );
+  }
+
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(location),
+              const SizedBox(height: 12),
+              _DetailRow(
+                icon: Icons.attach_money,
+                label: price,
+              ),
+              _DetailRow(
+                icon: Icons.star,
+                label: rating.toStringAsFixed(1),
+              ),
+              if (tags.isNotEmpty)
+                _DetailRow(
+                  icon: Icons.label_outline,
+                  label: tags.join(', '),
+                ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 200,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        image: DecorationImage(
-          image: NetworkImage(imageUrl),
-          fit: BoxFit.cover,
-        ),
-      ),
+    return GestureDetector(
+      onTap: () => _showDetails(context),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        width: 200,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              location,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+              color: Colors.black.withValues(alpha: 0.08),
             ),
           ],
         ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 130,
+                  width: double.infinity,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) {
+                      return const Icon(Icons.image_not_supported);
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppTheme.textDark,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            size: 16,
+                            color: Colors.amber,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(rating.toStringAsFixed(1)),
+                          const Spacer(),
+                          Text(
+                            price,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (tags.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: tags.take(2).map((tag) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                tag,
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.9),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: Icon(
+                    isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    color: isFavorite ? Colors.red : Colors.grey,
+                  ),
+                  onPressed: onFavorite,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label)),
+        ],
       ),
     );
   }
