@@ -20,6 +20,81 @@ class GroupSummaryMockDataSource {
         };
   }
 
+  Future<Map<String, List<String>>> fetchPlanningSelections(
+    String groupId,
+  ) async {
+    final group = mockTripSummaryDatabase[groupId];
+    final summary = group?['summary'] as Map<String, dynamic>? ?? const {};
+    return {
+      'Accommodation': List<String>.from(
+        summary['selectedAccommodationIds'] as List<dynamic>? ?? const [],
+      ),
+      'Transport': List<String>.from(
+        summary['selectedTransportIds'] as List<dynamic>? ?? const [],
+      ),
+    };
+  }
+
+  Future<void> setPlanningOptionSelected({
+    required String groupId,
+    required String category,
+    required String optionId,
+    required bool selected,
+  }) async {
+    final group = mockTripSummaryDatabase[groupId];
+    if (group == null || (category != 'Accommodation' && category != 'Transport')) {
+      return;
+    }
+    final summary = group['summary'] as Map<String, dynamic>;
+    final field = category == 'Accommodation'
+        ? 'selectedAccommodationIds'
+        : 'selectedTransportIds';
+    final ids = List<String>.from(summary[field] as List<dynamic>? ?? const []);
+    if (selected && !ids.contains(optionId)) {
+      ids.add(optionId);
+    } else if (!selected) {
+      ids.remove(optionId);
+    }
+    summary[field] = ids;
+  }
+
+  Future<void> updateConfirmedDetail({
+    required String groupId,
+    required String key,
+    required String value,
+  }) async {
+    final group = mockTripSummaryDatabase[groupId];
+    if (group == null) return;
+    final summary = group['summary'] as Map<String, dynamic>;
+    if (key == 'Budget') {
+      final amounts = RegExp(r'\d[\d,]*(?:\.\d+)?')
+          .allMatches(value)
+          .map((match) => double.tryParse(match.group(0)!.replaceAll(',', '')))
+          .whereType<double>()
+          .toList();
+      if (amounts.isEmpty) {
+        summary.remove('budgetRange');
+        summary.remove('budget');
+        final details = Map<String, String>.from(
+          summary['confirmedDetails'] as Map? ?? const {},
+        )..remove('Budget');
+        summary['confirmedDetails'] = details;
+      } else if (amounts.length == 1) {
+        summary['budgetRange'] = {'min': amounts.first, 'max': amounts.first};
+      } else {
+        summary['budgetRange'] = {'min': amounts[0], 'max': amounts[1]};
+      }
+      return;
+    }
+    final details = Map<String, String>.from(
+      summary['confirmedDetails'] as Map? ?? const {},
+    );
+    details[key] = value;
+    summary['confirmedDetails'] = details;
+    if (key == 'Destination') summary['destination'] = value;
+    if (key == 'Dates') summary['dates'] = value;
+  }
+
   /// Applies [changes] to every matching member. When [groupId] is null the
   /// member is updated in all groups.
   Future<bool> updateMember({
@@ -144,7 +219,6 @@ class GroupSummaryMockDataSource {
         'status': 'Planning',
         'dates': dates,
         'confirmedDetails': <String, String>{},
-        'completedItems': 0,
         'totalItems': 7,
         'pendingDecisions': ['Budget', 'Accommodation', 'Transport'],
       },

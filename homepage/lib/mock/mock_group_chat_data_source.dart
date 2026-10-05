@@ -6,6 +6,20 @@
 import 'mock_group_chat.dart';
 
 class GroupChatMockDataSource {
+  static final Map<String, String> _lastReadMessageIdByReaderAndGroup = {};
+
+  String? getLastReadMessageId(String groupId, String readerId) =>
+      _lastReadMessageIdByReaderAndGroup['$readerId::$groupId'];
+
+  void markMessagesRead({
+    required String groupId,
+    required String readerId,
+    required String throughMessageId,
+  }) {
+    _lastReadMessageIdByReaderAndGroup['$readerId::$groupId'] =
+        throughMessageId;
+  }
+
   Map<String, dynamic> _getGroupData(String groupId) {
     return mockGroupChatData[groupId] ?? {'messages': [], 'polls': []};
   }
@@ -28,7 +42,7 @@ class GroupChatMockDataSource {
     String? attachmentUrl,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
-    return {
+    final message = {
       'id': 'msg_${DateTime.now().millisecondsSinceEpoch}',
       'senderId': senderId,
       'senderName': senderName,
@@ -39,9 +53,18 @@ class GroupChatMockDataSource {
       'attachmentUrl': attachmentUrl,
       'isAiResponse': false,
     };
+    final group = mockGroupChatData.putIfAbsent(
+      groupId,
+      () => {'messages': <Map<String, dynamic>>[], 'polls': <Map<String, dynamic>>[]},
+    );
+    (group['messages'] as List<dynamic>).add(message);
+    return message;
   }
 
-  Future<Map<String, dynamic>> createAiResponse(String prompt) async {
+  Future<Map<String, dynamic>> createAiResponse(
+    String groupId,
+    String prompt,
+  ) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
 
     String responseText =
@@ -76,7 +99,7 @@ class GroupChatMockDataSource {
       };
     }
 
-    return {
+    final message = {
       'id': 'ai_msg_${DateTime.now().millisecondsSinceEpoch}',
       'senderId': 'ai_planner',
       'senderName': 'AI PLANNER • LIVE',
@@ -86,6 +109,12 @@ class GroupChatMockDataSource {
       'isAiResponse': true,
       'cardPayload': cardPayload,
     };
+    final group = mockGroupChatData.putIfAbsent(
+      groupId,
+      () => {'messages': <Map<String, dynamic>>[], 'polls': <Map<String, dynamic>>[]},
+    );
+    (group['messages'] as List<dynamic>).add(message);
+    return message;
   }
 
   Future<List<Map<String, dynamic>>> fetchPolls(String groupId) async {

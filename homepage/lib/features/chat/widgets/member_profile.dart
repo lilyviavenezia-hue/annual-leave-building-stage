@@ -133,13 +133,27 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
   LeaveData? _leaveData;
   bool _isLoadingLeave = true;
 
+  String? get _leaveDataMemberId =>
+      widget.member.isMe ? null : widget.member.id;
+
   @override
   void didUpdateWidget(covariant MemberProfileCardWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final memberIdentityChanged = oldWidget.member.id != widget.member.id;
     final memberBudgetChanged =
-        oldWidget.member.id != widget.member.id ||
+        memberIdentityChanged ||
         oldWidget.member.minBudget != widget.member.minBudget ||
         oldWidget.member.maxBudget != widget.member.maxBudget;
+    if (memberIdentityChanged) {
+      _isEditingBudget = false;
+      _preferences = List.from(widget.member.preferences);
+      _tripDateRange = _parseDateRange(widget.member.dateRange);
+      _calendarMonth = DateTime(
+        _tripDateRange.start.year,
+        _tripDateRange.start.month,
+      );
+      _loadLeaveData(year: _calendarMonth.year);
+    }
     if (memberBudgetChanged && !_isEditingBudget) {
       _budgetRange = RangeValues(
         widget.member.minBudget,
@@ -255,8 +269,12 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
 
   Future<void> _loadLeaveData({required int year}) async {
     if (mounted) setState(() => _isLoadingLeave = true);
-    final leaveData = await _leaveService.getUserLeaveData(year: year);
-    if (mounted) {
+    final memberId = _leaveDataMemberId;
+    final leaveData = await _leaveService.getUserLeaveData(
+      year: year,
+      memberId: memberId,
+    );
+    if (mounted && memberId == _leaveDataMemberId) {
       setState(() {
         _leaveData = leaveData;
         _isLoadingLeave = false;
@@ -337,7 +355,11 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
     );
     if (status == null) return;
 
-    final updated = await _leaveService.updateDateStatus(dateKey, status);
+    final updated = await _leaveService.updateDateStatus(
+      dateKey,
+      status,
+      memberId: _leaveDataMemberId,
+    );
     if (!updated || !mounted) return;
     await _loadLeaveData(year: date.year);
   }

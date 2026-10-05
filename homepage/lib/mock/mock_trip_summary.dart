@@ -8,11 +8,12 @@ final Map<String, Map<String, dynamic>> mockTripSummaryDatabase = {
       "destination": "Kyoto, Japan",
       "status": "Planning",
       "dates": "Oct 15 - Oct 22, 2026",
+      "budgetRange": {"min": 1500, "max": 2000},
+      "selectedAccommodationIds": ["HOTEL_01"],
       "confirmedDetails": {
         "Flights": "Pending",
         "Hotel": "Pending"
       },
-      "completedItems": 5,
       "totalItems": 7,
       "pendingDecisions": ["Budget", "Accommodation", "Transport"]
     },
@@ -101,7 +102,6 @@ final Map<String, Map<String, dynamic>> mockTripSummaryDatabase = {
         "Flights": "Booked",
         "Hotel": "Pending"
       },
-      "completedItems": 4,
       "totalItems": 7,
       "pendingDecisions": ["Accommodation", "Activities", "Budget"]
     }, // <-- REMOVED THE EXTRA }, THAT WAS HERE
@@ -154,7 +154,6 @@ final Map<String, Map<String, dynamic>> mockTripSummaryDatabase = {
         "Flights": "Pending",
         "Hotel": "Pending"
       },
-      "completedItems": 2,
       "totalItems": 7,
       "pendingDecisions": ["Flights", "Accommodation", "Budget"]
     },

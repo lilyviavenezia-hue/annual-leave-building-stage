@@ -5,35 +5,38 @@ import '../mock/mock_leave.dart';
 import 'account_service.dart';
 
 class LeaveService {
-  static final Map<String, Map<String, dynamic>> _leaveDataByUser = {};
+  static final Map<String, Map<String, dynamic>> _leaveDataByMemberId = {};
 
-  Future<Map<String, dynamic>> _userLeaveData() async {
-    final profile = await AccountService().getCurrentUser();
-    final userId = profile?.userId.trim();
-    final key = userId == null || userId.isEmpty ? 'signed_out' : userId;
-    return _leaveDataByUser.putIfAbsent(key, () {
-      // Keep the existing demo calendar for the initially signed-in demo user.
-      // Other accounts get their own clean leave calendar and balance.
-      if (key == '5574 5687 1125 5115') {
-        return {
-          ...mockLeaveData,
-          'date_statuses': Map<String, dynamic>.from(
-            mockLeaveData['date_statuses'] as Map<String, dynamic>,
-          ),
-        };
-      }
+  Future<Map<String, dynamic>> _leaveDataForMember(String? memberId) async {
+    final explicitId = memberId?.trim();
+    final account = explicitId == null || explicitId.isEmpty
+        ? await AccountService().getCurrentUser()
+        : null;
+    final accountId = account?.userId.trim();
+    final key = explicitId != null && explicitId.isNotEmpty
+        ? explicitId
+        : accountId == null || accountId.isEmpty
+        ? 'signed_out'
+        : accountId;
+
+    return _leaveDataByMemberId.putIfAbsent(key, () {
+      final fixture = mockLeaveDataByMemberId[key] ??
+          createMemberLeaveDataFallback(key);
+      // Copy statuses into this member's own mutable map. The fixture itself
+      // remains unchanged when this member edits their calendar.
       return {
-        'selected_year': DateTime.now().year,
-        'leave_balance': 18,
-        'date_statuses': <String, dynamic>{},
+        ...fixture,
+        'date_statuses': Map<String, dynamic>.from(
+          fixture['date_statuses'] as Map<String, dynamic>,
+        ),
       };
     });
   }
 
-  Future<LeaveData> getUserLeaveData({int? year}) async {
+  Future<LeaveData> getUserLeaveData({int? year, String? memberId}) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final leaveData = LeaveData.fromJson(await _userLeaveData());
+    final leaveData = LeaveData.fromJson(await _leaveDataForMember(memberId));
     final requestedYear = year ?? leaveData.selectedYear;
     if (requestedYear != leaveData.selectedYear) {
       final yearPrefix = '$requestedYear-';
@@ -59,10 +62,14 @@ class LeaveService {
     return mockLeaveCombos.map((json) => LeaveCombo.fromJson(json)).toList();
   }
 
-  Future<bool> updateDateStatus(String dateKey, DateStatus status) async {
+  Future<bool> updateDateStatus(
+    String dateKey,
+    DateStatus status, {
+    String? memberId,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    final userData = await _userLeaveData();
-    final statuses = userData['date_statuses'] as Map<String, dynamic>;
+    final memberData = await _leaveDataForMember(memberId);
+    final statuses = memberData['date_statuses'] as Map<String, dynamic>;
     if (status == DateStatus.normal) {
       statuses.remove(dateKey);
     } else {
@@ -71,10 +78,10 @@ class LeaveService {
     return true;
   }
 
-  Future<bool> updateLeaveBalance(int newBalance) async {
+  Future<bool> updateLeaveBalance(int newBalance, {String? memberId}) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    final userData = await _userLeaveData();
-    userData['leave_balance'] = newBalance;
+    final memberData = await _leaveDataForMember(memberId);
+    memberData['leave_balance'] = newBalance;
     return true;
   }
 }

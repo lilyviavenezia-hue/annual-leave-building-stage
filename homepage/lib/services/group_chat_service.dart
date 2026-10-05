@@ -28,6 +28,34 @@ class GroupChatService {
     }).toList();
   }
 
+  Future<int> getUnreadMessageCount({
+    required String groupId,
+    required String readerId,
+    required String senderId,
+  }) async {
+    final messages = await _dataSource.fetchMessages(groupId);
+    final lastReadId = _dataSource.getLastReadMessageId(groupId, readerId);
+    final lastReadIndex = lastReadId == null
+        ? -1
+        : messages.indexWhere((message) => message['id'] == lastReadId);
+    return messages
+        .skip(lastReadIndex + 1)
+        .where((message) => message['senderId'] != senderId)
+        .length;
+  }
+
+  Future<void> markMessagesRead({
+    required String groupId,
+    required String readerId,
+    required String throughMessageId,
+  }) async {
+    _dataSource.markMessagesRead(
+      groupId: groupId,
+      readerId: readerId,
+      throughMessageId: throughMessageId,
+    );
+  }
+
   Future<List<GroupPoll>> getActivePolls(String groupId) async {
     final rawPolls = await _dataSource.fetchPolls(groupId);
     return rawPolls
@@ -95,8 +123,11 @@ class GroupChatService {
     return ChatMessage.fromJson(json);
   }
 
-  Future<ChatMessage> triggerAiResponse(String promptText) async {
-    final json = await _dataSource.createAiResponse(promptText);
+  Future<ChatMessage> triggerAiResponse(
+    String groupId,
+    String promptText,
+  ) async {
+    final json = await _dataSource.createAiResponse(groupId, promptText);
     return ChatMessage.fromJson(json);
   }
 

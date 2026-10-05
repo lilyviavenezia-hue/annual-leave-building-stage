@@ -25,6 +25,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   GroupTripSummary? _tripSummary;
   List<GroupSuggestion> _suggestions = [];
   bool _isLoading = true;
+  String _selectedSuggestionCategory = 'Favourites';
 
   @override
   void initState() {
@@ -44,12 +45,27 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     });
   }
 
-  void _handleConfirmedDetailUpdated(String key, String newValue) {
-    if (_tripSummary != null) {
-      setState(() {
-        _tripSummary!.confirmedDetails[key] = newValue;
-      });
-    }
+  Future<void> _handleConfirmedDetailUpdated(String key, String newValue) async {
+    await _summaryService.updateConfirmedDetail(
+      groupId: widget.groupId,
+      key: key,
+      value: newValue,
+    );
+    await _loadSummaryData();
+  }
+
+  Future<void> _refreshSummary() async {
+    final summary = await _summaryService.getTripSummary(widget.groupId);
+    if (mounted) setState(() => _tripSummary = summary);
+  }
+
+  void _openPlanningSuggestions(String parameter) {
+    setState(() {
+      _selectedSuggestionCategory = parameter == 'Accommodation'
+          ? 'Stays'
+          : 'Flights';
+      _selectedTabIndex = 1;
+    });
   }
 
   void _handleReadyPressed() {
@@ -89,6 +105,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                     selectedIndex: _selectedTabIndex,
                     onTabChanged: (index) {
                       setState(() => _selectedTabIndex = index);
+                      if (index == 0) _refreshSummary();
                     },
                   ),
                   const SizedBox(height: 16),
@@ -96,16 +113,17 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                     child: _selectedTabIndex == 0
                         ? SummaryOverviewTab(
                             tripSummary: _tripSummary!,
-                            onSelectPendingDecision: () {
-                              setState(() => _selectedTabIndex = 1);
-                            },
+                            onSelectPendingDecision: _openPlanningSuggestions,
                             onTagsUpdated: () => setState(() {}),
                             onConfirmedDetailUpdated: _handleConfirmedDetailUpdated,
                           )
                         : SummarySuggestionsTab(
-                            suggestions: _suggestions,
-                            destinationCity:
-                                _tripSummary?.destination ?? 'Kyoto',
+                          suggestions: _suggestions,
+                          groupId: widget.groupId,
+                          destinationCity:
+                              _tripSummary?.destination ?? 'Kyoto',
+                          initialCategory: _selectedSuggestionCategory,
+                          onPlanningSelectionChanged: _refreshSummary,
                           ),
                   ),
                   if (_selectedTabIndex == 0 && _tripSummary != null)

@@ -20,28 +20,29 @@ class GroupSummaryService {
       groupData['summary'] as Map? ?? const <String, dynamic>{},
     );
 
-    var minBudget = double.infinity;
-    var maxBudget = 0.0;
-    for (final item in membersData) {
-      final member = item as Map<String, dynamic>;
-      final memberMin = (member['minBudget'] as num? ?? 0).toDouble();
-      final memberMax = (member['maxBudget'] as num? ?? 0).toDouble();
-      if (memberMin < minBudget) minBudget = memberMin;
-      if (memberMax > maxBudget) maxBudget = memberMax;
-    }
-    final actualMin = minBudget == double.infinity ? 0.0 : minBudget;
-    final budgetRange = 'RM${actualMin.toInt()} - RM${maxBudget.toInt()}';
-
-    final destination = (summaryData['destination'] as String?) ?? '';
-    final dates = (summaryData['dates'] as String?) ?? '';
-    final completedItems =
-        (summaryData['completedItems'] as num?)?.toInt() ?? 0;
-    final totalItems = (summaryData['totalItems'] as num?)?.toInt() ?? 0;
-    final pendingDecisions =
-        (summaryData['pendingDecisions'] as List<dynamic>? ??
-                const <dynamic>[])
-            .map((entry) => entry.toString())
-            .toList();
+    final savedDetails = Map<String, String>.from(
+      summaryData['confirmedDetails'] as Map? ?? const {},
+    );
+    final destination = (summaryData['destination'] as String?) ??
+        savedDetails['Destination'] ?? '';
+    final dates = (summaryData['dates'] as String?) ??
+        savedDetails['Dates'] ?? '';
+    final selections = await _dataSource.fetchPlanningSelections(groupId);
+    final budgetRange = _formatTripBudget(
+      summaryData['budgetRange'] ??
+          summaryData['budget'] ??
+          savedDetails['Budget'],
+    );
+    final completionStates = [
+      selections['Accommodation']!.isNotEmpty,
+      selections['Transport']!.isNotEmpty,
+      destination.trim().isNotEmpty,
+      dates.trim().isNotEmpty,
+      membersData.isNotEmpty,
+      budgetRange.isNotEmpty,
+    ];
+    final completedItems = completionStates.where((isComplete) => isComplete).length;
+    final totalItems = completionStates.length;
 
     final preferenceTags = membersData
         .expand(
@@ -54,13 +55,22 @@ class GroupSummaryService {
         .toSet()
         .toList();
 
-    final confirmedDetails = Map<String, String>.from(
-      summaryData['confirmedDetails'] as Map? ?? {},
-    )
-      ..['Destination'] = destination.isNotEmpty ? destination : 'To be decided'
-      ..['Dates'] = dates.isNotEmpty ? dates : 'To be decided'
-      ..['Traveller'] = '${membersData.length} Friends'
-      ..['Budget'] = budgetRange;
+    final confirmedDetails = <String, String>{
+      'Accommodation': selections['Accommodation']!.isNotEmpty
+          ? 'Selected'
+          : 'Needs decision',
+      'Transport': selections['Transport']!.isNotEmpty
+          ? 'Selected'
+          : 'Needs decision',
+      'Destination': destination.isNotEmpty ? destination : 'To be decided',
+      'Dates': dates.isNotEmpty ? dates : 'To be decided',
+      'Traveller': '${membersData.length}',
+      'Budget': budgetRange.isEmpty ? 'Needs decision' : budgetRange,
+    };
+    final pendingDecisions = confirmedDetails.entries
+        .where((entry) => entry.value == 'Needs decision')
+        .map((entry) => entry.key)
+        .toList();
 
     return GroupTripSummary.fromJson({
       'groupId': groupId,
@@ -97,6 +107,72 @@ class GroupSummaryService {
       isSaved: isSaved,
     );
   }
+
+  String _formatTripBudget(dynamic rawBudget) {
+    if (rawBudget is num) return 'RM${_formatAmount(rawBudget)}';
+    if (rawBudget is Map) {
+      final minimum = rawBudget['min'] as num?;
+      final maximum = rawBudget['max'] as num?;
+      if (minimum == null && maximum == null) return '';
+      if (minimum == null || maximum == null || minimum == maximum) {
+        return 'RM${_formatAmount(minimum ?? maximum!)}';
+      }
+      return 'RM${_formatAmount(minimum)}–RM${_formatAmount(maximum)}';
+    }
+    if (rawBudget is String) {
+      final text = rawBudget.trim();
+      if (text.isEmpty || text == 'Needs decision' || text == 'Selected') {
+        return '';
+      }
+      final amounts = RegExp(r'\d[\d,]*(?:\.\d+)?')
+          .allMatches(text)
+          .map((match) => double.tryParse(match.group(0)!.replaceAll(',', '')))
+          .whereType<double>()
+          .toList();
+      if (amounts.isEmpty) return '';
+      if (amounts.length == 1) return 'RM${_formatAmount(amounts.first)}';
+      return 'RM${_formatAmount(amounts[0])}–RM${_formatAmount(amounts[1])}';
+    }
+    return '';
+  }
+
+  String _formatAmount(num amount) {
+    final value = amount.toDouble();
+    final fixed = value == value.truncateToDouble()
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(2);
+    final parts = fixed.split('.');
+    final whole = parts.first.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
+    return parts.length == 1 ? whole : '$whole.${parts.last}';
+  }
+
+  Future<Map<String, List<String>>> getPlanningSelections(String groupId) =>
+      _dataSource.fetchPlanningSelections(groupId);
+
+  Future<void> setPlanningOptionSelected({
+    required String groupId,
+    required String category,
+    required String optionId,
+    required bool selected,
+  }) => _dataSource.setPlanningOptionSelected(
+    groupId: groupId,
+    category: category,
+    optionId: optionId,
+    selected: selected,
+  );
+
+  Future<void> updateConfirmedDetail({
+    required String groupId,
+    required String key,
+    required String value,
+  }) => _dataSource.updateConfirmedDetail(
+    groupId: groupId,
+    key: key,
+    value: value,
+  );
 
   Future<List<GroupMember>> getGroupMembers(String groupId) async {
     final groupData = await _dataSource.fetchGroup(groupId);

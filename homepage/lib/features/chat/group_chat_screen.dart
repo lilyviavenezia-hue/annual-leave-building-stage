@@ -81,7 +81,21 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         _isLoading = false;
       });
       _scrollToBottom();
+      _markMessagesReadAfterRender();
     }
+  }
+
+  void _markMessagesReadAfterRender() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _messages.isEmpty) return;
+      final readerId = _currentUserProfile?.userId.trim();
+      if (readerId == null || readerId.isEmpty) return;
+      _chatService.markMessagesRead(
+        groupId: widget.groupId,
+        readerId: readerId,
+        throughMessageId: _messages.last.id,
+      );
+    });
   }
 
   Future<void> _refreshGroupMembers() async {
@@ -123,16 +137,21 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         _isSending = false;
       });
       _scrollToBottom();
+      _markMessagesReadAfterRender();
     }
   }
 
   Future<void> _handleAskAi(String promptText) async {
-    final aiMessage = await _chatService.triggerAiResponse(promptText);
+    final aiMessage = await _chatService.triggerAiResponse(
+      widget.groupId,
+      promptText,
+    );
     if (mounted) {
       setState(() {
         _messages.add(aiMessage);
       });
       _scrollToBottom();
+      _markMessagesReadAfterRender();
     }
   }
 

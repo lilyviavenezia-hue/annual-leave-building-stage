@@ -11,16 +11,23 @@ import '../../../services/flight_service.dart';
 import '../../../services/hotel_service.dart';
 import '../../../services/recommendation_service.dart';
 import '../../../services/favourites_service.dart';
+import '../../../services/group_summary_service.dart';
 import 'suggestion_detail.dart';
 
 class SummarySuggestionsTab extends StatefulWidget {
   final List<GroupSuggestion> suggestions;
   final String destinationCity;
+  final String groupId;
+  final String initialCategory;
+  final VoidCallback? onPlanningSelectionChanged;
 
   const SummarySuggestionsTab({
     super.key,
     required this.suggestions,
+    required this.groupId,
     this.destinationCity = 'Kyoto',
+    this.initialCategory = 'Favourites',
+    this.onPlanningSelectionChanged,
   });
 
   @override
@@ -28,13 +35,14 @@ class SummarySuggestionsTab extends StatefulWidget {
 }
 
 class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
-  String _selectedCategoryFilter = 'Favourites';
+  late String _selectedCategoryFilter = widget.initialCategory;
   List<Attraction> _attractions = [];
   List<FoodOption> _foods = [];
   List<HotelOption> _hotels = [];
   List<FlightOption> _flights = [];
   final SuggestionFavoritesService _favoritesService =
       SuggestionFavoritesService();
+  final GroupSummaryService _summaryService = GroupSummaryService();
   bool _isLoadingItems = true;
 
   @override
@@ -46,6 +54,9 @@ class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
   @override
   void didUpdateWidget(covariant SummarySuggestionsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialCategory != widget.initialCategory) {
+      _selectedCategoryFilter = widget.initialCategory;
+    }
     if (oldWidget.destinationCity != widget.destinationCity) {
       _loadCategoryItems();
     }
@@ -59,6 +70,7 @@ class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
       HotelService().searchHotels(widget.destinationCity),
       FlightService().getFlights(),
     ]);
+    final selections = await _summaryService.getPlanningSelections(widget.groupId);
     if (!mounted) return;
     setState(() {
       _attractions = results[0] as List<Attraction>;
@@ -67,8 +79,12 @@ class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
       _flights = results[3] as List<FlightOption>;
       for (final item in [..._attractions, ..._foods, ..._hotels, ..._flights]) {
         final key = _favouriteKey(item);
-        final saved = _favoritesService.isFavorite(key);
-        if (saved != null) {
+        if (item is HotelOption) {
+          item.isFavourite = selections['Accommodation']!.contains(item.id);
+        } else if (item is FlightOption) {
+          item.isFavourite = selections['Transport']!.contains(item.id);
+        } else if (_favoritesService.isFavorite(key) != null) {
+          final saved = _favoritesService.isFavorite(key)!;
           _setItemFavourite(item, saved);
         } else {
           _favoritesService.setFavorite(key, _itemFavourite(item));
@@ -116,13 +132,27 @@ class _SummarySuggestionsTabState extends State<SummarySuggestionsTab> {
     }
   }
 
-  void _toggleItemFavourite(Object item) {
+  Future<void> _toggleItemFavourite(Object item) async {
+    final category = item is HotelOption
+        ? 'Accommodation'
+        : item is FlightOption
+        ? 'Transport'
+        : null;
+    final isSaved = !_itemFavourite(item);
     setState(() {
       final key = _favouriteKey(item);
-      final isSaved = !_itemFavourite(item);
       _setItemFavourite(item, isSaved);
-      _favoritesService.setFavorite(key, isSaved);
+      if (category == null) _favoritesService.setFavorite(key, isSaved);
     });
+    if (category != null) {
+      await _summaryService.setPlanningOptionSelected(
+        groupId: widget.groupId,
+        category: category,
+        optionId: item is HotelOption ? item.id : (item as FlightOption).id,
+        selected: isSaved,
+      );
+      widget.onPlanningSelectionChanged?.call();
+    }
   }
 
   _SuggestionEntry _entryFor(Object item) => switch (item) {

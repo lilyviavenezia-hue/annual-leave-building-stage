@@ -19,7 +19,6 @@ final Map<String, dynamic> mockChatListData = {
       "destination": "Kyoto, Japan",
       "lastMessage": "Kyoto is a historic Japanese city famous...",
       "lastMessageTime": "2026-10-12T14:39:00Z",
-      "unreadCount": 2,
       "avatarUrl": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=300&q=80",
       "isLiveSync": true
     },
@@ -29,7 +28,6 @@ final Map<String, dynamic> mockChatListData = {
       "destination": "Bali, Indonesia",
       "lastMessage": "Alex: Should we book the villa near Canggu?",
       "lastMessageTime": "2026-10-10T09:15:00Z",
-      "unreadCount": 0,
       "avatarUrl": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=300&q=80",
       "isLiveSync": true
     },
@@ -39,7 +37,6 @@ final Map<String, dynamic> mockChatListData = {
       "destination": "Seoul, South Korea",
       "lastMessage": "Mei: Added Myeongdong street food to preferences",
       "lastMessageTime": "2026-10-05T18:20:00Z",
-      "unreadCount": 0,
       "avatarUrl": "https://images.unsplash.com/photo-1538485399081-7191377e8241?auto=format&fit=crop&w=300&q=80",
       "isLiveSync": false
     }

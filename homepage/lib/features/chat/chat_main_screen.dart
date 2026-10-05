@@ -324,9 +324,10 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
             ],
           ),
         ),
-        onTap: () {
+        onTap: () async {
           // Navigate to the existing individual GroupChatScreen
-          context.push('/chat/${chat.groupId}');
+          await context.push('/chat/${chat.groupId}');
+          if (mounted) await _loadData();
         },
       ),
     );

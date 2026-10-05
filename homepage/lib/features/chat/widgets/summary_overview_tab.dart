@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../models/group_trip_summary.dart';
 
 class SummaryOverviewTab extends StatelessWidget {
   final GroupTripSummary tripSummary;
-  final VoidCallback onSelectPendingDecision;
+  final ValueChanged<String> onSelectPendingDecision;
   final VoidCallback onTagsUpdated;
   final Function(String key, String newValue) onConfirmedDetailUpdated;
 
@@ -323,8 +323,16 @@ class SummaryOverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pendingDecisionCount = tripSummary.pendingDecisions
-        .where((decision) => !decision.toLowerCase().contains('budget'))
+    const planningKeys = [
+      'Accommodation',
+      'Transport',
+      'Destination',
+      'Dates',
+      'Traveller',
+      'Budget',
+    ];
+    final pendingDecisionCount = planningKeys
+        .where((key) => tripSummary.confirmedDetails[key] == 'Needs decision')
         .length;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
@@ -387,45 +395,41 @@ class SummaryOverviewTab extends StatelessWidget {
               mainAxisSpacing: 8,
               mainAxisExtent: _StatusTile.height,
             ),
-            children: [
-              // Pending decisions -> tapping opens the Suggestions tab
-              ...tripSummary.pendingDecisions
-                  .where((decision) => !decision.toLowerCase().contains('budget'))
-                  .map(
-                (decision) => _StatusTile(
-                  kind: _TileKind.pending,
-                  icon: Icons.help_outline,
-                  label: decision,
-                  value: 'Needs decision',
-                  onTap: onSelectPendingDecision,
-                ),
-              ),
-
-              // Confirmed details -> tapping opens the edit sheet
-              ...tripSummary.confirmedDetails.entries
-                  .where((entry) => !entry.key.toLowerCase().contains('budget'))
-                  .map(
-                (entry) => _StatusTile(
-                  kind: _TileKind.confirmed,
-                  icon: _getCategoryIcon(entry.key),
-                  label: entry.key,
-                  value: entry.value,
-                  onTap: () =>
-                      _showEditDetailSheet(context, entry.key, entry.value),
-                ),
-              ),
-              _StatusTile(
-                kind: _TileKind.confirmed,
-                icon: _getCategoryIcon('Budget'),
-                label: 'Budget',
-                value: _budgetValue(tripSummary),
-                onTap: () => _showEditBudgetSheet(
+            children: planningKeys.map((key) {
+              final value = key == 'Budget'
+                  ? (tripSummary.budget.trim().isEmpty
+                        ? 'Needs decision'
+                        : tripSummary.budget)
+                  : tripSummary.confirmedDetails[key] ?? '';
+              final isStatus = const {'Accommodation', 'Transport', 'Budget'}
+                  .contains(key);
+              final isPending = value == 'Needs decision';
+              VoidCallback onTap;
+              if (key == 'Budget') {
+                onTap = () => _showEditBudgetSheet(
                   context,
                   _budgetKey(tripSummary),
-                  _budgetValue(tripSummary),
-                ),
-              ),
-            ],
+                  tripSummary.budget,
+                );
+              } else if (key == 'Accommodation' || key == 'Transport') {
+                onTap = () => onSelectPendingDecision(key);
+              } else if (key == 'Traveller') {
+                onTap = () {};
+              } else {
+                onTap = () => _showEditDetailSheet(context, key, value);
+              }
+              return _StatusTile(
+                kind: isStatus && isPending
+                    ? _TileKind.pending
+                    : _TileKind.confirmed,
+                icon: isPending ? Icons.help_outline : _getCategoryIcon(key),
+                label: key,
+                value: value,
+                onTap: onTap,
+                fitValue: key == 'Dates',
+                editable: key != 'Traveller',
+              );
+            }).toList(),
           ),
 
           const SizedBox(height: 22),
@@ -524,6 +528,8 @@ class _StatusTile extends StatelessWidget {
   final String label;
   final String value;
   final VoidCallback onTap;
+  final bool fitValue;
+  final bool editable;
 
   const _StatusTile({
     required this.kind,
@@ -531,6 +537,8 @@ class _StatusTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    this.fitValue = false,
+    this.editable = true,
   });
 
   @override
@@ -592,21 +600,35 @@ class _StatusTile extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (!isPending)
+                        if (!isPending && editable)
                           Icon(Icons.edit_outlined, size: 12, color: accent),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: valueColor,
-                      ),
-                    ),
+                    fitValue
+                        ? FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              value,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: valueColor,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: valueColor,
+                            ),
+                          ),
                   ],
                 ),
               ),
