@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../models/group_member.dart';
 import '../../../models/group_poll.dart';
 
 class StickyPollsSection extends StatefulWidget {
   final List<GroupPoll> activePolls;
+  final List<GroupMember> members;
   final Function(String pollId, String optionId) onVote;
 
   const StickyPollsSection({
     super.key,
     required this.activePolls,
+    required this.members,
     required this.onVote,
   });
 
@@ -27,30 +30,54 @@ class _StickyPollsSectionState extends State<StickyPollsSection> {
     super.dispose();
   }
 
-  Widget _buildVoterAvatars(int voteCount, List<String> votedUserIds) {
-    if (voteCount <= 0) return const SizedBox.shrink();
+  @override
+  void didUpdateWidget(covariant StickyPollsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activePolls.length == widget.activePolls.length) return;
 
-    final Map<String, String> userAvatarMap = {
-      'user_1': 'https://i.pravatar.cc/150?img=1',
-      'user_2': 'https://i.pravatar.cc/150?img=2',
-      'user_3': 'https://i.pravatar.cc/150?img=3',
-      'user_4': 'https://i.pravatar.cc/150?img=4',
-      'user_me': 'https://i.pravatar.cc/150?img=5',
+    final nextPage = widget.activePolls.isEmpty
+        ? 0
+        : oldWidget.activePolls.length < widget.activePolls.length
+        ? widget.activePolls.length - 1
+        : _currentPage.clamp(0, widget.activePolls.length - 1).toInt();
+    if (widget.activePolls.length < oldWidget.activePolls.length) {
+      _currentPage = nextPage;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients && widget.activePolls.isNotEmpty) {
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
+  }
+
+  Widget _buildVoterAvatars(List<String> votedUserIds) {
+    final membersById = {
+      for (final member in widget.members) member.id: member,
     };
-
-    final displayCount = votedUserIds.length.clamp(0, 3);
-    final avatarsToRender = votedUserIds.take(displayCount).toList();
+    final voters = votedUserIds
+        .map((id) => membersById[id])
+        .whereType<GroupMember>()
+        .take(5)
+        .toList();
+    if (voters.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
-      height: 20,
-      width: avatarsToRender.isEmpty
-          ? 20
-          : (14.0 * avatarsToRender.length + 6.0),
+      height: 22,
+      width: 14.0 * voters.length + 6.0,
       child: Stack(
-        children: avatarsToRender.asMap().entries.map((entry) {
+        children: voters.asMap().entries.map((entry) {
           final index = entry.key;
-          final userId = entry.value;
-          final avatarUrl = userAvatarMap[userId];
+          final member = voters[index];
+          final avatarUrl = member.avatarUrl;
+          final ImageProvider? avatarImage = avatarUrl == null
+              ? null
+              : avatarUrl.startsWith('assets/')
+              ? AssetImage(avatarUrl)
+              : NetworkImage(avatarUrl);
 
           return Positioned(
             left: index * 12.0,
@@ -62,14 +89,14 @@ class _StickyPollsSectionState extends State<StickyPollsSection> {
               child: CircleAvatar(
                 radius: 9,
                 backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
-                backgroundImage: avatarUrl != null
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: avatarUrl == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 10,
-                        color: AppTheme.primaryGreen,
+                backgroundImage: avatarImage,
+                child: avatarImage == null
+                    ? Text(
+                        member.name.isNotEmpty ? member.name[0] : '',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          color: AppTheme.primaryGreen,
+                        ),
                       )
                     : null,
               ),
@@ -95,12 +122,16 @@ class _StickyPollsSectionState extends State<StickyPollsSection> {
           Expanded(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
               height: currentPoll.isExpanded
-                  ? (96.0 + (currentPoll.options.length * 56.0))
-                  : 74.0,
+                  ? (72.0 + (currentPoll.options.length * 48.0))
+                  : 52.0,
               child: PageView.builder(
                 controller: _pageController,
                 scrollDirection: Axis.vertical,
+                physics: const PageScrollPhysics(
+                  parent: ClampingScrollPhysics(),
+                ),
                 itemCount: widget.activePolls.length,
                 onPageChanged: (index) {
                   setState(() {
@@ -215,12 +246,11 @@ class _StickyPollsSectionState extends State<StickyPollsSection> {
                                         Row(
                                           children: [
                                             _buildVoterAvatars(
-                                              option.voteCount,
                                               option.votedUserIds,
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              '${option.voteCount}',
+                                              '${option.votedUserIds.length}',
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.bold,

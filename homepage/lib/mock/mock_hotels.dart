@@ -11,6 +11,9 @@ final mockHotelSearchResults = {
       "rating": 4.8,
       "price_per_night_formatted": "RM120/nt",
       "amenities": ["WiFi", "Breakfast", "Spa"],
+      "room_types": ["Japanese-style tatami room", "Deluxe room"],
+      "check_in_time": "3:00 PM",
+      "check_out_time": "11:00 AM",
       "booking_url": "https://www.booking.com"
     },
     {
@@ -21,6 +24,9 @@ final mockHotelSearchResults = {
       "rating": 4.6,
       "price_per_night_formatted": "RM180/nt",
       "amenities": ["WiFi", "Indoor Pool", "Gym"],
+      "room_types": ["Standard room", "Deluxe twin", "Suite"],
+      "check_in_time": "3:00 PM",
+      "check_out_time": "11:00 AM",
       "booking_url": "https://www.agoda.com"
     },
     {
@@ -31,6 +37,9 @@ final mockHotelSearchResults = {
       "rating": 4.9,
       "price_per_night_formatted": "RM250/nt",
       "amenities": ["WiFi", "Onsen", "Garden"],
+      "room_types": ["Traditional ryokan room", "Garden suite"],
+      "check_in_time": "3:00 PM",
+      "check_out_time": "12:00 PM",
       "booking_url": "https://www.hotels.com"
     }
   ]

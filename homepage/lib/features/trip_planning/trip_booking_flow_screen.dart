@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../models/attraction.dart';
-import '../../models/flight.dart';
-import '../../models/food_option.dart';
-import '../../models/hotel.dart';
-import '../../models/trip.dart';
-import '../../models/trip_booking.dart';
-import '../../services/trip_booking_service.dart';
-import '../../services/trip_service.dart';
+import '../../../models/attraction.dart';
+import '../../../models/flight.dart';
+import '../../../models/food_option.dart';
+import '../../../models/hotel.dart';
+import '../../../models/trip.dart';
+import '../../../models/trip_booking.dart';
+import '../../../services/trip_booking_service.dart';
+import '../../../services/trip_service.dart';
 
 class TripBookingFlowScreen extends StatefulWidget {
   const TripBookingFlowScreen({super.key, required this.trip});

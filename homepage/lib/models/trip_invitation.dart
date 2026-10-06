@@ -2,6 +2,7 @@
 
 class TripInvitation {
   final String id;
+  final String groupId;
   final String hostName;
   final String hostAvatar;
   final String tripTitle;
@@ -10,6 +11,7 @@ class TripInvitation {
 
   TripInvitation({
     required this.id,
+    required this.groupId,
     required this.hostName,
     required this.hostAvatar,
     required this.tripTitle,
@@ -20,6 +22,7 @@ class TripInvitation {
   factory TripInvitation.fromJson(Map<String, dynamic> json) {
     return TripInvitation(
       id: json['id'] as String,
+      groupId: json['groupId'] as String? ?? '',
       hostName: json['hostName'] as String,
       hostAvatar: json['hostAvatar'] as String? ?? '',
       tripTitle: json['tripTitle'] as String,

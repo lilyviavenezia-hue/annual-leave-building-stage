@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../models/group_trip_summary.dart';
 
 class SummaryOverviewTab extends StatelessWidget {
   final GroupTripSummary tripSummary;
-  final VoidCallback onSelectPendingDecision;
+  final ValueChanged<String> onSelectPendingDecision;
   final VoidCallback onTagsUpdated;
   final Function(String key, String newValue) onConfirmedDetailUpdated;
 
@@ -19,10 +19,14 @@ class SummaryOverviewTab extends StatelessWidget {
 
   IconData _getCategoryIcon(String key) {
     final lowerKey = key.toLowerCase();
-    if (lowerKey.contains('budget')) return Icons.help_outline;
-    if (lowerKey.contains('accommodation')) return Icons.hotel_outlined;
+    if (lowerKey.contains('budget')) return Icons.account_balance_wallet_outlined;
+    if (lowerKey.contains('accommodation') || lowerKey.contains('hotel')) {
+      return Icons.hotel_outlined;
+    }
+    if (lowerKey.contains('flight')) return Icons.flight_takeoff_outlined;
     if (lowerKey.contains('destination')) return Icons.location_on_outlined;
     if (lowerKey.contains('date')) return Icons.calendar_today_outlined;
+    if (lowerKey.contains('duration')) return Icons.schedule_outlined;
     if (lowerKey.contains('transport')) return Icons.directions_bus_outlined;
     if (lowerKey.contains('friend') ||
         lowerKey.contains('traveller') ||
@@ -30,6 +34,20 @@ class SummaryOverviewTab extends StatelessWidget {
       return Icons.people_outline;
     }
     return Icons.check_circle_outline;
+  }
+
+  String _budgetKey(GroupTripSummary summary) {
+    for (final key in summary.confirmedDetails.keys) {
+      if (key.toLowerCase().contains('budget')) return key;
+    }
+    return 'Budget';
+  }
+
+  String _budgetValue(GroupTripSummary summary) {
+    for (final entry in summary.confirmedDetails.entries) {
+      if (entry.key.toLowerCase().contains('budget')) return entry.value;
+    }
+    return summary.budget;
   }
 
   void _showEditDetailSheet(
@@ -130,8 +148,192 @@ class SummaryOverviewTab extends StatelessWidget {
     );
   }
 
+  void _showEditBudgetSheet(
+    BuildContext context,
+    String key,
+    String currentValue,
+  ) {
+    final values = RegExp(r'\d+(?:\.\d+)?')
+        .allMatches(currentValue.replaceAll(',', ''))
+        .map((match) => match.group(0)!)
+        .toList();
+    final minController = TextEditingController(
+      text: values.isNotEmpty ? values.first : '',
+    );
+    final maxController = TextEditingController(
+      text: values.length > 1 ? values[1] : '',
+    );
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Edit Budget Range',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: minController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Minimum (RM)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: maxController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Maximum (RM)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  final minimum = double.tryParse(minController.text.trim());
+                  final maximum = double.tryParse(maxController.text.trim());
+                  if (minimum == null ||
+                      maximum == null ||
+                      minimum < 0 ||
+                      maximum < minimum) {
+                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Enter a valid minimum and maximum.'),
+                      ),
+                    );
+                    return;
+                  }
+                  String formatAmount(double amount) =>
+                      amount == amount.truncateToDouble()
+                          ? amount.toStringAsFixed(0)
+                          : amount.toStringAsFixed(2);
+                  onConfirmedDetailUpdated(
+                    key,
+                    'RM${formatAmount(minimum)} - RM${formatAmount(maximum)}',
+                  );
+                  Navigator.pop(sheetContext);
+                },
+                child: const Text(
+                  'Save Changes',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(() {
+      minController.dispose();
+      maxController.dispose();
+    });
+  }
+
+  Future<void> _showPreferenceDialog(
+    BuildContext context,
+    List<String> tags, {
+    String? existingTag,
+  }) async {
+    final controller = TextEditingController(text: existingTag ?? '');
+    final preference = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(existingTag == null ? 'Add Preference' : 'Edit Preference'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            hintText: 'Enter a preference',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              controller.text.trim(),
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (preference == null || preference.isEmpty) return;
+
+    if (existingTag == null) {
+      tags.add(preference);
+    } else {
+      final index = tags.indexOf(existingTag);
+      if (index != -1) tags[index] = preference;
+    }
+    onTagsUpdated();
+  }
+
   @override
   Widget build(BuildContext context) {
+    const planningKeys = [
+      'Accommodation',
+      'Transport',
+      'Destination',
+      'Dates',
+      'Traveller',
+      'Budget',
+    ];
+    final pendingDecisionCount = planningKeys
+        .where((key) => tripSummary.confirmedDetails[key] == 'Needs decision')
+        .length;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
       child: Column(
@@ -164,7 +366,7 @@ class SummaryOverviewTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${tripSummary.pendingDecisions.length} TO DECIDE',
+                  '$pendingDecisionCount TO DECIDE',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -174,139 +376,65 @@ class SummaryOverviewTab extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           const Text(
-            'Needs your group to decide · tap any item to mark resolved',
+            'Needs your group to decide · tap a card to resolve it',
             style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
           ),
           const SizedBox(height: 14),
 
-          // B. Interactive Grid combining Pending (Yellow) & Confirmed (Green) Items
-          GridView.count(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
+          // B. Status grid: every card (pending or confirmed) shares one
+          // fixed height and the same two-column layout.
+          GridView(
+            padding: EdgeInsets.zero,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.9,
-            children: [
-              // Pending Decisions (Yellow Tiles -> Tapping opens Suggestions)
-              ...tripSummary.pendingDecisions.map((decision) {
-                return GestureDetector(
-                  onTap: onSelectPendingDecision,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8E1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFFE082)),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.help_outline,
-                            size: 12,
-                            color: Colors.amber,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          decision,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 9,
-                            color: AppTheme.textDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              mainAxisExtent: _StatusTile.height,
+            ),
+            children: planningKeys.map((key) {
+              final value = key == 'Budget'
+                  ? (tripSummary.budget.trim().isEmpty
+                        ? 'Needs decision'
+                        : tripSummary.budget)
+                  : tripSummary.confirmedDetails[key] ?? '';
+              final isStatus = const {'Accommodation', 'Transport', 'Budget'}
+                  .contains(key);
+              final isPending = value == 'Needs decision';
+              VoidCallback onTap;
+              if (key == 'Budget') {
+                onTap = () => _showEditBudgetSheet(
+                  context,
+                  _budgetKey(tripSummary),
+                  tripSummary.budget,
                 );
-              }),
-
-              // Confirmed Details (Green Tiles with Pencil Icon -> Tapping opens Edit Sheet)
-              ...tripSummary.confirmedDetails.entries.map((entry) {
-                return GestureDetector(
-                  onTap: () =>
-                      _showEditDetailSheet(context, entry.key, entry.value),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFA5D6A7)),
-                    ),
-                    child: Stack(
-                      children: [
-                        // Edit Indicator Pencil Icon on Top Right
-                        const Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Icon(
-                            Icons.edit_outlined,
-                            size: 14,
-                            color: AppTheme.primaryGreen,
-                          ),
-                        ),
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _getCategoryIcon(entry.key),
-                                size: 14,
-                                color: AppTheme.primaryGreen,
-                              ),
-                              const SizedBox(height: 1),
-                              Text(
-                                entry.key,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 8,
-                                  color: AppTheme.textMuted,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 1),
-                              Text(
-                                entry.value,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
+              } else if (key == 'Accommodation' || key == 'Transport') {
+                onTap = () => onSelectPendingDecision(key);
+              } else if (key == 'Traveller') {
+                onTap = () {};
+              } else {
+                onTap = () => _showEditDetailSheet(context, key, value);
+              }
+              return _StatusTile(
+                kind: isStatus && isPending
+                    ? _TileKind.pending
+                    : _TileKind.confirmed,
+                icon: isPending ? Icons.help_outline : _getCategoryIcon(key),
+                label: key,
+                value: value,
+                onTap: onTap,
+                fitValue: key == 'Dates',
+                editable: key != 'Traveller',
+              );
+            }).toList(),
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 22),
 
-          // C. Group Preferences Section
+          // C. Group Preferences (sits directly under the status grid)
           const Text(
             'Preferences',
             style: TextStyle(
@@ -315,23 +443,26 @@ class SummaryOverviewTab extends StatelessWidget {
               color: AppTheme.textDark,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          _buildEditablePreferences(tripSummary.preferenceTags),
+          _buildEditablePreferences(context, tripSummary.preferenceTags),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildEditablePreferences(List<String> tags) {
+  Widget _buildEditablePreferences(BuildContext context, List<String> tags) {
+    const chipShape = StadiumBorder();
+    const chipBorder = BorderSide(color: AppTheme.borderSubtle);
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        ...tags.map(
-          (tag) => Chip(
+          ...tags.map(
+          (tag) => InputChip(
             label: Text(
               tag,
               style: const TextStyle(
@@ -341,6 +472,15 @@ class SummaryOverviewTab extends StatelessWidget {
               ),
             ),
             backgroundColor: AppTheme.cardBackground,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: chipShape,
+            side: chipBorder,
+            onPressed: () => _showPreferenceDialog(
+              context,
+              tags,
+              existingTag: tag,
+            ),
             onDeleted: () {
               tags.remove(tag);
               onTagsUpdated();
@@ -349,10 +489,6 @@ class SummaryOverviewTab extends StatelessWidget {
               Icons.close,
               size: 16,
               color: AppTheme.textMuted,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide.none,
             ),
           ),
         ),
@@ -367,16 +503,139 @@ class SummaryOverviewTab extends StatelessWidget {
             ),
           ),
           backgroundColor: AppTheme.cardBackground,
-          onPressed: () {
-            tags.add('New Preference');
-            onTagsUpdated();
-          },
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide.none,
-          ),
+          visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: chipShape,
+          side: chipBorder,
+          onPressed: () => _showPreferenceDialog(context, tags),
         ),
       ],
+    );
+  }
+}
+
+enum _TileKind { pending, confirmed }
+
+/// One compact card in the planning-status grid.
+///
+/// Pending and confirmed items use the exact same layout and height
+/// ([height]); only the colours and the status line differ.
+class _StatusTile extends StatelessWidget {
+  static const double height = 60;
+
+  final _TileKind kind;
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final bool fitValue;
+  final bool editable;
+
+  const _StatusTile({
+    required this.kind,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.fitValue = false,
+    this.editable = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPending = kind == _TileKind.pending;
+
+    final Color background = isPending
+        ? const Color(0xFFFFF8E1)
+        : const Color(0xFFE8F5E9);
+    final Color border = isPending
+        ? const Color(0xFFFFE082)
+        : const Color(0xFFA5D6A7);
+    final Color accent = isPending
+        ? const Color(0xFFC79100)
+        : AppTheme.primaryGreen;
+    final Color valueColor = isPending
+        ? const Color(0xFF9A6B00)
+        : AppTheme.textDark;
+
+    return Material(
+      color: background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        side: BorderSide(color: border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 16, color: accent),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                        if (!isPending && editable)
+                          Icon(Icons.edit_outlined, size: 12, color: accent),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    fitValue
+                        ? FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              value,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: valueColor,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: valueColor,
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

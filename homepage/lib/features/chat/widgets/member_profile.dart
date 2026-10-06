@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:homempage/features/home/leave_optimizer/widgets/leave_calendar_card.dart';
+import 'package:homempage/models/leave_status.dart';
+
+import 'dart:math' as math;
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../models/group_member.dart';
@@ -18,6 +23,13 @@ class MemberProfileModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final avatarUrl = member.avatarUrl;
+    final ImageProvider? avatarImage = avatarUrl == null
+        ? null
+        : avatarUrl.startsWith('assets/')
+        ? AssetImage(avatarUrl)
+        : NetworkImage(avatarUrl);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
@@ -44,10 +56,8 @@ class MemberProfileModal extends StatelessWidget {
               CircleAvatar(
                 radius: 26,
                 backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.15),
-                backgroundImage: member.avatarUrl != null
-                    ? NetworkImage(member.avatarUrl!)
-                    : null,
-                child: member.avatarUrl == null
+                backgroundImage: avatarImage,
+                child: avatarUrl == null
                     ? Text(
                         member.name.isNotEmpty ? member.name[0] : '',
                         style: const TextStyle(
@@ -115,9 +125,44 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
 
   late RangeValues _budgetRange;
   late List<String> _preferences;
-  late String _dateRange;
+  late DateTimeRange _tripDateRange;
+  late DateTime _calendarMonth;
+  late final TextEditingController _minimumBudgetController;
+  late final TextEditingController _maximumBudgetController;
+  bool _isEditingBudget = false;
   LeaveData? _leaveData;
   bool _isLoadingLeave = true;
+
+  String? get _leaveDataMemberId =>
+      widget.member.isMe ? null : widget.member.id;
+
+  @override
+  void didUpdateWidget(covariant MemberProfileCardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final memberIdentityChanged = oldWidget.member.id != widget.member.id;
+    final memberBudgetChanged =
+        memberIdentityChanged ||
+        oldWidget.member.minBudget != widget.member.minBudget ||
+        oldWidget.member.maxBudget != widget.member.maxBudget;
+    if (memberIdentityChanged) {
+      _isEditingBudget = false;
+      _preferences = List.from(widget.member.preferences);
+      _tripDateRange = _parseDateRange(widget.member.dateRange);
+      _calendarMonth = DateTime(
+        _tripDateRange.start.year,
+        _tripDateRange.start.month,
+      );
+      _loadLeaveData(year: _calendarMonth.year);
+    }
+    if (memberBudgetChanged && !_isEditingBudget) {
+      _budgetRange = RangeValues(
+        widget.member.minBudget,
+        widget.member.maxBudget,
+      );
+      _minimumBudgetController.text = _budgetRange.start.round().toString();
+      _maximumBudgetController.text = _budgetRange.end.round().toString();
+    }
+  }
 
   @override
   void initState() {
@@ -126,24 +171,76 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
       widget.member.minBudget,
       widget.member.maxBudget,
     );
+    _minimumBudgetController = TextEditingController(
+      text: _budgetRange.start.round().toString(),
+    );
+    _maximumBudgetController = TextEditingController(
+      text: _budgetRange.end.round().toString(),
+    );
     _preferences = List.from(widget.member.preferences);
-    _dateRange = widget.member.dateRange;
-    _loadLeaveData();
+    _tripDateRange = _parseDateRange(widget.member.dateRange);
+    _calendarMonth = DateTime(
+      _tripDateRange.start.year,
+      _tripDateRange.start.month,
+    );
+    _loadLeaveData(year: _calendarMonth.year);
   }
 
-  Future<void> _selectDateRange() async {
-    final today = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(today.year, today.month),
-      lastDate: DateTime(today.year + 2),
-      initialDateRange: DateTimeRange(
-        start: today,
-        end: today.add(const Duration(days: 6)),
-      ),
-    );
-    if (picked == null || !mounted || !widget.member.isMe) return;
+  @override
+  void dispose() {
+    _minimumBudgetController.dispose();
+    _maximumBudgetController.dispose();
+    super.dispose();
+  }
 
+  DateTimeRange _parseDateRange(String dateRange) {
+    final dateParts = RegExp(r'([A-Za-z]{3})\s+(\d{1,2})')
+        .allMatches(dateRange)
+        .toList();
+    final years = RegExp(r'\d{4}')
+        .allMatches(dateRange)
+        .map((match) => int.parse(match.group(0)!))
+        .toList();
+    const monthNumbers = {
+      'Jan': 1,
+      'Feb': 2,
+      'Mar': 3,
+      'Apr': 4,
+      'May': 5,
+      'Jun': 6,
+      'Jul': 7,
+      'Aug': 8,
+      'Sep': 9,
+      'Oct': 10,
+      'Nov': 11,
+      'Dec': 12,
+    };
+
+    if (dateParts.length < 2) {
+      final start = DateTime.now();
+      return DateTimeRange(
+        start: start,
+        end: start.add(const Duration(days: 6)),
+      );
+    }
+
+    final currentYear = DateTime.now().year;
+    final startYear = years.isNotEmpty ? years.first : currentYear;
+    final endYear = years.length > 1 ? years.last : startYear;
+    final start = DateTime(
+      startYear,
+      monthNumbers[dateParts.first.group(1)] ?? 1,
+      int.parse(dateParts.first.group(2)!),
+    );
+    final end = DateTime(
+      endYear,
+      monthNumbers[dateParts[1].group(1)] ?? start.month,
+      int.parse(dateParts[1].group(2)!),
+    );
+    return DateTimeRange(start: start, end: end);
+  }
+
+  String _formatDateRange(DateTimeRange dateRange) {
     const months = [
       'Jan',
       'Feb',
@@ -158,20 +255,26 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
       'Nov',
       'Dec',
     ];
-    final selected =
-        '${months[picked.start.month - 1]} ${picked.start.day} - '
-        '${months[picked.end.month - 1]} ${picked.end.day}, ${picked.end.year}';
-    setState(() => _dateRange = selected);
-    await _summaryService.updateMemberDateRange(
-      memberId: widget.member.id,
-      dateRange: selected,
-    );
-    widget.onMemberUpdated?.call();
+    final start = dateRange.start;
+    final end = dateRange.end;
+    if (start.year != end.year) {
+      return '${months[start.month - 1]} ${start.day}, ${start.year} - '
+          '${months[end.month - 1]} ${end.day}, ${end.year}';
+    }
+    final endDate = start.month == end.month
+        ? '${end.day}'
+        : '${months[end.month - 1]} ${end.day}';
+    return '${months[start.month - 1]} ${start.day} - $endDate, ${end.year}';
   }
 
-  Future<void> _loadLeaveData() async {
-    final leaveData = await _leaveService.getUserLeaveData();
-    if (mounted) {
+  Future<void> _loadLeaveData({required int year}) async {
+    if (mounted) setState(() => _isLoadingLeave = true);
+    final memberId = _leaveDataMemberId;
+    final leaveData = await _leaveService.getUserLeaveData(
+      year: year,
+      memberId: memberId,
+    );
+    if (mounted && memberId == _leaveDataMemberId) {
       setState(() {
         _leaveData = leaveData;
         _isLoadingLeave = false;
@@ -179,16 +282,142 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
     }
   }
 
-  void _updateBudget(RangeValues values) {
-    if (!widget.member.isMe) return;
-    setState(() {
-      _budgetRange = values;
-    });
-    _summaryService.updateMemberBudget(
-      memberId: widget.member.id,
-      minBudget: values.start,
-      maxBudget: values.end,
+  Future<void> _selectTripDateRange() async {
+    final today = DateTime.now();
+    final firstYear = math.min(today.year - 10, _tripDateRange.start.year);
+    final lastYear = math.max(today.year + 10, _tripDateRange.end.year);
+    final selected = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(firstYear),
+      lastDate: DateTime(lastYear, 12, 31),
+      initialDateRange: _tripDateRange,
     );
+    if (selected == null || !mounted) return;
+
+    final updated = DateTimeRange(
+      start: DateUtils.dateOnly(selected.start),
+      end: DateUtils.dateOnly(selected.end),
+    );
+    setState(() {
+      _tripDateRange = updated;
+      _calendarMonth = DateTime(updated.start.year, updated.start.month);
+    });
+    await _summaryService.updateMemberDateRange(
+      memberId: widget.member.id,
+      dateRange: _formatDateRange(updated),
+    );
+    await _loadLeaveData(year: _calendarMonth.year);
+    widget.onMemberUpdated?.call();
+  }
+
+  Future<void> _changeCalendarMonth(int year, int monthIndex) async {
+    final month = DateTime(year, monthIndex + 1);
+    setState(() => _calendarMonth = month);
+    if (_leaveData?.selectedYear != year) {
+      await _loadLeaveData(year: year);
+    }
+  }
+
+  Future<void> _showLeaveStatusPicker(DateTime date) async {
+    final dateKey =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final currentStatus =
+        _leaveData?.dateStatuses[dateKey] ?? DateStatus.normal;
+    if (currentStatus == DateStatus.holiday) return;
+
+    final status = await showModalBottomSheet<DateStatus>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _statusTile(
+              context,
+              dateKey,
+              'Busy',
+              DateStatus.busy,
+            ),
+            _statusTile(
+              context,
+              dateKey,
+              'Normal',
+              DateStatus.normal,
+            ),
+            _statusTile(
+              context,
+              dateKey,
+              'Leave Taken',
+              DateStatus.annualLeave,
+            ),
+          ],
+        ),
+      ),
+    );
+    if (status == null) return;
+
+    final updated = await _leaveService.updateDateStatus(
+      dateKey,
+      status,
+      memberId: _leaveDataMemberId,
+    );
+    if (!updated || !mounted) return;
+    await _loadLeaveData(year: date.year);
+  }
+
+  Widget _statusTile(
+    BuildContext context,
+    String dateKey,
+    String label,
+    DateStatus status,
+  ) => ListTile(
+    title: Text(label),
+    trailing: _leaveData?.dateStatuses[dateKey] == status
+        ? const Icon(Icons.check, color: AppTheme.primaryGreen)
+        : null,
+    onTap: () => Navigator.pop(context, status),
+  );
+
+  void _startBudgetEdit() {
+    if (!widget.member.isMe) return;
+    _minimumBudgetController.text = _budgetRange.start.round().toString();
+    _maximumBudgetController.text = _budgetRange.end.round().toString();
+    setState(() => _isEditingBudget = true);
+  }
+
+  void _cancelBudgetEdit() {
+    _minimumBudgetController.text = _budgetRange.start.round().toString();
+    _maximumBudgetController.text = _budgetRange.end.round().toString();
+    setState(() => _isEditingBudget = false);
+  }
+
+  Future<void> _saveBudgetEdit() async {
+    final minimum = int.tryParse(_minimumBudgetController.text);
+    final maximum = int.tryParse(_maximumBudgetController.text);
+    if (minimum == null || maximum == null || maximum < minimum) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid minimum and maximum budget.')),
+      );
+      return;
+    }
+
+    final updated = RangeValues(minimum.toDouble(), maximum.toDouble());
+    final saved = await _summaryService.updateMemberBudget(
+      memberId: widget.member.id,
+      minBudget: updated.start,
+      maxBudget: updated.end,
+    );
+    if (!mounted) return;
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update the trip budget.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _budgetRange = updated;
+      _isEditingBudget = false;
+    });
     widget.onMemberUpdated?.call();
   }
 
@@ -251,21 +480,22 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
   Widget build(BuildContext context) {
     final minVal = _budgetRange.start.round();
     final maxVal = _budgetRange.end.round();
+    final leaveBalanceLabel = widget.member.isMe
+        ? (_leaveData == null
+              ? widget.member.leaveBalanceSummary
+              : '${_leaveData!.leaveBalance} Leave Days Left')
+        : widget.member.leaveBalanceSummary;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryGreen.withValues(alpha: 0.4),
-          width: 1.5,
-        ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -274,32 +504,34 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
         children: [
           // 1. AVAILABLE DATES (Synced with Leave Optimizer)
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
-                child: Text(
-                  'AVAILABLE DATES',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF788896),
-                    letterSpacing: 0.4,
-                  ),
+              const Text(
+                'AVAILABLE DATES',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF788896),
+                  letterSpacing: 0.5,
                 ),
               ),
-              if (_leaveData != null)
-                Text(
-                  '${_leaveData!.leaveBalance} Leave Days Left',
+              Flexible(
+                child: Text(
+                  leaveBalanceLabel,
+                  textAlign: TextAlign.end,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 8,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primaryGreen,
                   ),
                 ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           InkWell(
-            onTap: widget.member.isMe ? _selectDateRange : null,
+            onTap: _selectTripDateRange,
             borderRadius: BorderRadius.circular(10),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -308,30 +540,23 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: AppTheme.textDark,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_today,
-                          size: 15,
-                          color: AppTheme.textDark,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            _dateRange,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textDark,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      _formatDateRange(_tripDateRange),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                      ),
                     ),
                   ),
                   const Icon(
@@ -355,68 +580,86 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
 
           const SizedBox(height: 16),
 
-          // 2. TRIP BUDGET RANGE (Editable for 'Ying (You)')
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  widget.member.isMe
-                      ? 'TRIP BUDGET RANGE (EDITABLE)'
-                      : 'TRIP BUDGET RANGE',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF788896),
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'RM$minVal – RM$maxVal',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-
-          RangeSlider(
-            values: _budgetRange,
-            min: 500,
-            max: 10000,
-            divisions: 19,
-            activeColor: AppTheme.primaryGreen,
-            inactiveColor: Colors.grey.shade200,
-            onChanged: widget.member.isMe ? _updateBudget : null,
-          ),
-
+          // 2. TRIP BUDGET RANGE
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'MIN RM $minVal',
-                style: const TextStyle(
-                  fontSize: 10,
+              const Text(
+                'TRIP BUDGET RANGE',
+                style: TextStyle(
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.textMuted,
+                  color: Color(0xFF788896),
+                  letterSpacing: 0.5,
                 ),
               ),
-              Text(
-                'MAX RM $maxVal',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textMuted,
+              if (!_isEditingBudget)
+                InkWell(
+                  onTap: widget.member.isMe ? _startBudgetEdit : null,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'RM$minVal – RM$maxVal',
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
+          if (_isEditingBudget) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _minimumBudgetController,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      prefixText: 'RM ',
+                      hintText: 'Min',
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _maximumBudgetController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      prefixText: 'RM ',
+                      hintText: 'Max',
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Save budget',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _saveBudgetEdit,
+                  icon: const Icon(
+                    Icons.check_circle,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cancel editing',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _cancelBudgetEdit,
+                  icon: const Icon(Icons.close, color: AppTheme.textMuted),
+                ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: 16),
 
@@ -498,80 +741,14 @@ class _MemberProfileCardWidgetState extends State<MemberProfileCardWidget> {
   }
 
   Widget _buildLeaveOptimizerCalendar() {
-    final days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'June 2026',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              Row(
-                children: [
-                  Icon(Icons.chevron_left, size: 16),
-                  SizedBox(width: 8),
-                  Icon(Icons.chevron_right, size: 16),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: days
-                .map(
-                  (d) => Text(
-                    d,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
-            children: List.generate(14, (i) {
-              final dayNum = 12 + i;
-              final isSelected = dayNum >= 12 && dayNum <= 18;
-              return Container(
-                width: 22,
-                height: 22,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppTheme.primaryGreen
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '$dayNum',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: isSelected ? Colors.white : AppTheme.textDark,
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
+    return LeaveCalendarCard(
+      selectedYear: _calendarMonth.year,
+      currentMonthIndex: _calendarMonth.month - 1,
+      dateStatuses: _leaveData?.dateStatuses ?? const {},
+      selectedDateRange: null,
+      onDateTap: _showLeaveStatusPicker,
+      onMonthChanged: _changeCalendarMonth,
+      showLegend: false,
     );
   }
 }

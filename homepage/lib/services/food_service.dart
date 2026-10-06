@@ -13,4 +13,13 @@ class FoodService {
     }
     return [];
   }
+
+  Future<bool> setFoodFavourite(String id, bool isFavourite) {
+    final eats = mockFoodSearchResults['eats'] as List<dynamic>? ?? const [];
+    final food = eats.where((item) => (item as Map)['id'] == id);
+    if (food.isEmpty) return Future.value(false);
+
+    (food.first as Map<String, dynamic>)['is_favourite'] = isFavourite;
+    return Future.value(true);
+  }
 }

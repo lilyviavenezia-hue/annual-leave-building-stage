@@ -7,6 +7,10 @@ class HotelOption {
   final String pricePerNightFormatted; // e.g., "RM120/nt" or "RM180/nt"
   final List<String> amenities; // e.g., ["WiFi", "Breakfast", "Spa"]
   final String bookingUrl;
+  final List<String> roomTypes;
+  final String checkInTime;
+  final String checkOutTime;
+  bool isFavourite;
 
   HotelOption({
     required this.id,
@@ -17,6 +21,10 @@ class HotelOption {
     required this.pricePerNightFormatted,
     required this.amenities,
     required this.bookingUrl,
+    this.roomTypes = const [],
+    this.checkInTime = '',
+    this.checkOutTime = '',
+    this.isFavourite = false,
   });
 
   factory HotelOption.fromJson(Map<String, dynamic> json) {
@@ -32,6 +40,13 @@ class HotelOption {
               .toList() ??
           [],
       bookingUrl: json['booking_url'] as String? ?? '',
+      roomTypes: (json['room_types'] as List<dynamic>? ?? const [])
+          .map((item) => item.toString()).toList(),
+      checkInTime: json['check_in_time'] as String? ?? '',
+      checkOutTime: json['check_out_time'] as String? ?? '',
+      isFavourite: json['is_favourite'] as bool? ??
+          json['isFavourite'] as bool? ??
+          false,
     );
   }
 
@@ -45,6 +60,10 @@ class HotelOption {
       'price_per_night_formatted': pricePerNightFormatted,
       'amenities': amenities,
       'booking_url': bookingUrl,
+      'room_types': roomTypes,
+      'check_in_time': checkInTime,
+      'check_out_time': checkOutTime,
+      'is_favourite': isFavourite,
     };
   }
 }

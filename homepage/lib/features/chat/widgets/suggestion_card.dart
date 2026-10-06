@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../models/group_trip_summary.dart';
+import 'favorite_icon_button.dart';
 
 class SuggestionCard extends StatelessWidget {
   final GroupSuggestion suggestion;
+  final VoidCallback? onToggleFavorite;
 
-  const SuggestionCard({super.key, required this.suggestion});
+  const SuggestionCard({
+    super.key,
+    required this.suggestion,
+    this.onToggleFavorite,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +31,6 @@ class SuggestionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image Header
           Stack(
             children: [
               ClipRRect(
@@ -35,28 +40,34 @@ class SuggestionCard extends StatelessWidget {
                   height: 160,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 160,
+                    width: double.infinity,
+                    color: Colors.grey.shade200,
+                    child: const Icon(
+                      Icons.image,
+                      size: 46,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
                 ),
               ),
               Positioned(
                 top: 12,
                 right: 12,
                 child: Container(
-                  padding: const EdgeInsets.all(8),
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    suggestion.isSaved ? Icons.favorite : Icons.favorite_border,
-                    color: suggestion.isSaved ? Colors.red : Colors.grey,
-                    size: 18,
+                  child: FavoriteIconButton(
+                    isFavorite: suggestion.isSaved,
+                    onPressed: onToggleFavorite,
                   ),
                 ),
               ),
             ],
           ),
-
-          // Content Details
           Padding(
             padding: const EdgeInsets.all(14.0),
             child: Column(
@@ -102,8 +113,6 @@ class SuggestionCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // Match Score Progress Bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(

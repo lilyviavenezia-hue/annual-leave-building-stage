@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../mock/mock_chat_upload_files.dart';
 
 class UploadFileModal extends StatelessWidget {
   final Function(String fileName) onFileSelected;
@@ -38,38 +39,34 @@ class UploadFileModal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+          ...mockChatUploadFiles.map((file) {
+            final isItinerary = file['style'] == 'itinerary';
+            final color = isItinerary ? Colors.deepPurple : Colors.teal;
+            return ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isItinerary
+                      ? Icons.picture_as_pdf_rounded
+                      : Icons.description_rounded,
+                  color: color,
+                ),
               ),
-              child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.deepPurple),
-            ),
-            title: const Text('Kyoto_Itinerary_V1.pdf', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('PDF Document · 1.2 MB'),
-            onTap: () {
-              Navigator.pop(context);
-              onFileSelected('📄 Kyoto_Itinerary_V1.pdf');
-            },
-          ),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.teal.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+              title: Text(
+                file['name']!,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              child: const Icon(Icons.description_rounded, color: Colors.teal),
-            ),
-            title: const Text('Flight_Confirmation.pdf', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('PDF Document · 450 KB'),
-            onTap: () {
-              Navigator.pop(context);
-              onFileSelected('📄 Flight_Confirmation.pdf');
-            },
-          ),
+              subtitle: Text(file['description']!),
+              onTap: () {
+                Navigator.pop(context);
+                onFileSelected(file['message']!);
+              },
+            );
+          }),
           const SizedBox(height: 12),
         ],
       ),

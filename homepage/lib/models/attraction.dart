@@ -6,6 +6,9 @@ class Attraction {
   final String price;
   final List<String> tags;
   final double rating;
+  final String openingHours;
+  final String description;
+  bool isFavourite;
 
   Attraction({
     required this.id,
@@ -15,6 +18,9 @@ class Attraction {
     this.price = 'Free',
     this.tags = const [],
     this.rating = 4.8,
+    this.openingHours = '',
+    this.description = '',
+    this.isFavourite = false,
   });
 
   factory Attraction.fromJson(Map<String, dynamic> json) {
@@ -28,6 +34,11 @@ class Attraction {
           .map((tag) => tag as String)
           .toList(),
       rating: (json['rating'] as num?)?.toDouble() ?? 4.8,
+      openingHours: json['opening_hours'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      isFavourite: json['is_favourite'] as bool? ??
+          json['isFavourite'] as bool? ??
+          false,
     );
   }
 
@@ -40,6 +51,9 @@ class Attraction {
       'price': price,
       'tags': tags,
       'rating': rating,
+      'opening_hours': openingHours,
+      'description': description,
+      'is_favourite': isFavourite,
     };
   }
 }

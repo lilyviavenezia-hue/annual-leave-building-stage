@@ -1,17 +1,15 @@
 import 'package:go_router/go_router.dart';
-
 import 'main_navigation.dart';
 import 'placeholder_screen.dart';
-import '../../models/trip.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/itinerary/itinerary_overview_screen.dart';
 import '../../features/chat/chat_main_screen.dart';
 import '../../features/chat/group_chat_screen.dart';
-import '../../features/trips/trips_screen.dart';
+import '../../features/account/account_screen.dart';
 import '../../features/trips/financial_summary_screen.dart';
 import '../../features/trips/travel_checklist_screen.dart';
 import '../../features/trips/trip_memories_screen.dart';
-import '../../features/account/account_screen.dart';
+import '../../models/trip.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
@@ -52,39 +50,49 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/trips',
-              builder: (context, state) => const TripsScreen(),
+              builder: (context, state) => const ItineraryOverviewScreen(
+                itineraryId: 'ITIN_KYOTO_2026',
+              ),
               routes: [
                 GoRoute(
-                  path: ':itineraryId',
-                  builder: (context, state) => ItineraryOverviewScreen(
-                    itineraryId: state.pathParameters['itineraryId']!,
-                    initialTrip: state.extra is Trip
-                        ? state.extra as Trip
-                        : null,
-                  ),
-                  routes: [
-                    GoRoute(
-                      path: 'memories',
-                      builder: (context, state) => TripMemoriesScreen(
-                        tripId: state.pathParameters['itineraryId']!,
-                        initialTrip: state.extra is Trip
-                            ? state.extra as Trip
-                            : null,
-                      ),
-                    ),
-                    GoRoute(
-                      path: 'financial-summary',
-                      builder: (context, state) => FinancialSummaryScreen(
-                        tripId: state.pathParameters['itineraryId']!,
-                        trip: state.extra is Trip ? state.extra as Trip : null,
-                      ),
-                    ),
-                    GoRoute(
-                      path: 'checklist',
-                      builder: (context, state) =>
-                          const TravelChecklistScreen(),
-                    ),
-                  ],
+                  path: ':tripId',
+                  builder: (context, state) {
+                    final tripId = state.pathParameters['tripId']!;
+                    final trip = state.extra is Trip ? state.extra as Trip : null;
+                    return ItineraryOverviewScreen(
+                      itineraryId: tripId,
+                      initialTrip: trip,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: ':tripId/checklist',
+                  builder: (context, state) {
+                    final tripId = state.pathParameters['tripId']!;
+                    return TravelChecklistScreen();
+                  },
+                ),
+                GoRoute(
+                  path: ':tripId/financial-summary',
+                  builder: (context, state) {
+                    final tripId = state.pathParameters['tripId']!;
+                    final trip = state.extra is Trip ? state.extra as Trip : null;
+                    return FinancialSummaryScreen(
+                      tripId: tripId,
+                      trip: trip,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: ':tripId/memories',
+                  builder: (context, state) {
+                    final tripId = state.pathParameters['tripId']!;
+                    final trip = state.extra is Trip ? state.extra as Trip : null;
+                    return TripMemoriesScreen(
+                      tripId: tripId,
+                      initialTrip: trip,
+                    );
+                  },
                 ),
               ],
             ),

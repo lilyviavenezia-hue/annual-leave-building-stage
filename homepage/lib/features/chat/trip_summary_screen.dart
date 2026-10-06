@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../models/group_trip_summary.dart';
 import '../../services/group_summary_service.dart';
@@ -19,10 +21,11 @@ class TripSummaryScreen extends StatefulWidget {
 class _TripSummaryScreenState extends State<TripSummaryScreen> {
   final GroupSummaryService _summaryService = GroupSummaryService();
 
-  int _selectedTabIndex = 0; // 0: Overview, 1: Suggestions
+  int _selectedTabIndex = 1;
   GroupTripSummary? _tripSummary;
   List<GroupSuggestion> _suggestions = [];
   bool _isLoading = true;
+  String _selectedSuggestionCategory = 'Favourites';
 
   @override
   void initState() {
@@ -34,20 +37,40 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     final summary = await _summaryService.getTripSummary(widget.groupId);
     final suggestions = await _summaryService.getGroupSuggestions(widget.groupId);
 
-    if (mounted) {
-      setState(() {
-        _tripSummary = summary;
-        _suggestions = suggestions;
-        _isLoading = false;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _tripSummary = summary;
+      _suggestions = suggestions;
+      _isLoading = false;
+    });
   }
 
-  void _handleConfirmedDetailUpdated(String key, String newValue) {
-    if (_tripSummary != null) {
-      setState(() {
-        _tripSummary!.confirmedDetails[key] = newValue;
-      });
+  Future<void> _handleConfirmedDetailUpdated(String key, String newValue) async {
+    await _summaryService.updateConfirmedDetail(
+      groupId: widget.groupId,
+      key: key,
+      value: newValue,
+    );
+    await _loadSummaryData();
+  }
+
+  Future<void> _refreshSummary() async {
+    final summary = await _summaryService.getTripSummary(widget.groupId);
+    if (mounted) setState(() => _tripSummary = summary);
+  }
+
+  void _openPlanningSuggestions(String parameter) {
+    setState(() {
+      _selectedSuggestionCategory = parameter == 'Accommodation'
+          ? 'Stays'
+          : 'Flights';
+      _selectedTabIndex = 1;
+    });
+  }
+
+  void _handleReadyPressed() {
+    if (mounted) {
+      context.go('/trips');
     }
   }
 
@@ -78,36 +101,36 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 8),
-
-                  // 1. Segmented Control Tab Switcher
                   SummarySegmentedControl(
                     selectedIndex: _selectedTabIndex,
                     onTabChanged: (index) {
                       setState(() => _selectedTabIndex = index);
+                      if (index == 0) _refreshSummary();
                     },
                   ),
-
                   const SizedBox(height: 16),
-
-                  // 2. Tab Views
                   Expanded(
                     child: _selectedTabIndex == 0
                         ? SummaryOverviewTab(
                             tripSummary: _tripSummary!,
-                            onSelectPendingDecision: () {
-                              setState(() => _selectedTabIndex = 1);
-                            },
+                            onSelectPendingDecision: _openPlanningSuggestions,
                             onTagsUpdated: () => setState(() {}),
                             onConfirmedDetailUpdated: _handleConfirmedDetailUpdated,
                           )
                         : SummarySuggestionsTab(
-                            suggestions: _suggestions,
+                          suggestions: _suggestions,
+                          groupId: widget.groupId,
+                          destinationCity:
+                              _tripSummary?.destination ?? 'Kyoto',
+                          initialCategory: _selectedSuggestionCategory,
+                          onPlanningSelectionChanged: _refreshSummary,
                           ),
                   ),
-
-                  // 3. Host Action Bar
                   if (_selectedTabIndex == 0 && _tripSummary != null)
-                    HostActionBar(tripSummary: _tripSummary!),
+                    HostActionBar(
+                      tripSummary: _tripSummary!,
+                      onReadyPressed: _handleReadyPressed,
+                    ),
                 ],
               ),
             ),

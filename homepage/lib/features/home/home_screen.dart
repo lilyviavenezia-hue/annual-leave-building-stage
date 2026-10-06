@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../core/theme/app_theme.dart';
 import '../../models/planning_trip.dart';
 import '../../services/planning_service.dart';
@@ -30,7 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigateToCreateTrip() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CreateTripScreen()),
+      MaterialPageRoute(
+        builder: (context) => const CreateTripScreen(),
+      ),
     );
   }
 
@@ -72,25 +73,16 @@ class _HomeScreenState extends State<HomeScreen> {
           const UpcomingTripCard(),
           const SizedBox(height: 20),
 
-          // 2. Primary actions
-          Row(
+          // 2. Primary Action Button with Leave Optimizer Icon
+          Stack(
+            clipBehavior: Clip.none,
             children: [
-              Expanded(
+              SizedBox(
+                width: double.infinity,
+                height: 52,
                 child: ElevatedButton.icon(
                   onPressed: _navigateToCreateTrip,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen,
-                    elevation: 0,
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.add,
-                    color: AppTheme.backgroundWhite,
-                    size: 22,
-                  ),
+                  icon: const Icon(Icons.add, color: AppTheme.backgroundWhite, size: 22),
                   label: const Text(
                     'Create a new trip',
                     style: TextStyle(
@@ -99,25 +91,34 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppTheme.backgroundWhite,
                     ),
                   ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Tooltip(
-                message: 'Leave Optimizer',
-                child: Material(
-                  color: AppTheme.primaryBlue,
-                  shape: const CircleBorder(),
-                  elevation: 2,
-                  child: InkWell(
-                    onTap: _openLeaveOptimizerModal,
-                    customBorder: const CircleBorder(),
-                    child: const SizedBox(
-                      width: 52,
-                      height: 52,
-                      child: Icon(
-                        Icons.calendar_today_rounded,
-                        color: AppTheme.backgroundWhite,
-                        size: 23,
+              Positioned(
+                top: -12,
+                right: -12,
+                child: Tooltip(
+                  message: 'Leave Optimizer',
+                  child: Material(
+                    color: AppTheme.primaryBlue,
+                    shape: const CircleBorder(),
+                    elevation: 3,
+                    child: InkWell(
+                      onTap: _openLeaveOptimizerModal,
+                      customBorder: const CircleBorder(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(10.0),
+                        child: Icon(
+                          Icons.calendar_today_rounded,
+                          color: AppTheme.backgroundWhite,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),
@@ -144,7 +145,9 @@ class _HomeScreenState extends State<HomeScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24.0),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
                 );
               }
 

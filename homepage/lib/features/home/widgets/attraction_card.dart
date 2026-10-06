@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../models/attraction.dart';
@@ -18,284 +18,178 @@ class AttractionCard extends StatelessWidget {
     required this.title,
     required this.location,
     required this.imageUrl,
-    required this.price,
-    required this.tags,
-    required this.rating,
-    required this.isFavorite,
-    required this.onFavorite,
+    this.price = 'Free',
+    this.tags = const [],
+    this.rating = 4.8,
+    this.isFavorite = false,
+    this.onFavorite = _noop,
   });
 
-  /// Factory constructor to easily create card from an Attraction model
-  factory AttractionCard.fromModel({Key? key, required Attraction attraction}) {
+  static void _noop() {}
+
+  factory AttractionCard.fromModel(
+    Attraction attraction, {
+    bool? isFavorite,
+    VoidCallback? onFavorite,
+  }) {
     return AttractionCard(
-      key: key,
       title: attraction.title,
       location: attraction.location,
       imageUrl: attraction.imageUrl,
       price: attraction.price,
       tags: attraction.tags,
       rating: attraction.rating,
-      isFavorite: false,
-      onFavorite: () {},
+      isFavorite: isFavorite ?? attraction.isFavourite,
+      onFavorite: onFavorite ?? _noop,
+    );
+  }
+
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(location),
+              const SizedBox(height: 12),
+              _DetailRow(
+                icon: Icons.attach_money,
+                label: price,
+              ),
+              _DetailRow(
+                icon: Icons.star,
+                label: rating.toStringAsFixed(1),
+              ),
+              if (tags.isNotEmpty)
+                _DetailRow(
+                  icon: Icons.label_outline,
+                  label: tags.join(', '),
+                ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7E2DA)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Material(
+    return GestureDetector(
+      onTap: () => _showDetails(context),
+      child: Container(
+        width: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
           color: Colors.white,
-          child: InkWell(
-            onTap: () => showDetails(context),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+              color: Colors.black.withValues(alpha: 0.08),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 116,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: Colors.blueGrey.shade700,
-                          child: const Icon(
-                            Icons.landscape_rounded,
-                            color: Colors.white,
-                            size: 36,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Material(
-                          color: Colors.transparent,
-                          shape: const CircleBorder(),
-                          child: IconButton(
-                            tooltip: isFavorite
-                                ? 'Remove from Favourites'
-                                : 'Add to Favourites',
-                            onPressed: onFavorite,
-                            icon: Icon(
-                              isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color: AppTheme.primaryGreen,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  height: 130,
+                  width: double.infinity,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) {
+                      return const Icon(Icons.image_not_supported);
+                    },
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppTheme.textDark,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
+                          const Icon(
+                            Icons.star,
+                            size: 16,
+                            color: Colors.amber,
                           ),
+                          const SizedBox(width: 4),
+                          Text(rating.toStringAsFixed(1)),
+                          const Spacer(),
                           Text(
                             price,
                             style: const TextStyle(
-                              color: AppTheme.primaryGreen,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 5,
-                        runSpacing: 4,
-                        children: tags
-                            .map(
-                              (tag) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  tag,
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              location,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: AppTheme.textMuted,
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            Icons.star_rounded,
-                            color: AppTheme.primaryGreen,
-                            size: 14,
-                          ),
-                          Text(
-                            rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppTheme.primaryGreen,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void showDetails(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SafeArea(
-        child: Container(
-          key: const ValueKey('attraction-details-sheet'),
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.8,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
-                  child: Image.network(
-                    imageUrl,
-                    height: 220,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 220,
-                      width: double.infinity,
-                      color: Colors.blueGrey.shade700,
-                      child: const Icon(
-                        Icons.landscape_rounded,
-                        color: Colors.white,
-                        size: 48,
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.star_rounded,
-                            color: AppTheme.primaryGreen,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: AppTheme.primaryGreen,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Attraction details',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _DetailRow(
-                        icon: Icons.location_on_outlined,
-                        label: 'Location',
-                        value: location,
-                      ),
-                      const SizedBox(height: 12),
-                      _DetailRow(
-                        icon: Icons.payments_outlined,
-                        label: 'Price',
-                        value: price,
-                      ),
                       if (tags.isNotEmpty) ...[
-                        const SizedBox(height: 18),
-                        const Text(
-                          'Categories',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
                         const SizedBox(height: 8),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: tags
-                              .map(
-                                (tag) => Chip(
-                                  label: Text(tag),
-                                  backgroundColor: AppTheme.badgeGreenLight,
-                                  side: BorderSide.none,
-                                ),
-                              )
-                              .toList(),
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: tags.take(2).map((tag) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                tag,
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ],
                     ],
@@ -303,7 +197,24 @@ class AttractionCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.9),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: Icon(
+                    isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    color: isFavorite ? Colors.red : Colors.grey,
+                  ),
+                  onPressed: onFavorite,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -311,37 +222,25 @@ class AttractionCard extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
   const _DetailRow({
     required this.icon,
     required this.label,
-    required this.value,
   });
-
-  final IconData icon;
-  final String label;
-  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: AppTheme.primaryGreen, size: 20),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-              ),
-              const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontSize: 14)),
-            ],
-          ),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label)),
+        ],
+      ),
     );
   }
 }

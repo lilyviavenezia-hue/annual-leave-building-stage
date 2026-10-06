@@ -1,104 +1,186 @@
-final List<Map<String, dynamic>> mockGroupSuggestionsData = [
-  {
-    "id": "sug_1",
-    "title": "Kiyomizu-dera",
-    "location": "Higashiyama, Kyoto",
-    "category": "GROUP MATCH",
-    "matchPercentage": 94,
-    "imageUrl": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80",
-    "isSaved": true
-  },
-  {
-    "id": "sug_2",
-    "title": "Arashiyama",
-    "location": "Ukyo-ku, Kyoto",
-    "category": "GROUP MATCH",
-    "matchPercentage": 88,
-    "imageUrl": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=600&q=80",
-    "isSaved": true
-  },
-  {
-    "id": "sug_3",
-    "title": "Nishiki Market",
-    "location": "Nakagyo, Kyoto",
-    "category": "FOOD • NIGHTLIFE",
-    "matchPercentage": 82,
-    "imageUrl": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80",
-    "isSaved": false
-  },
-  {
-    "id": "sug_4",
-    "title": "Fushimi Inari",
-    "location": "Fushimi-ku, Kyoto",
-    "category": "GROUP MATCH",
-    "matchPercentage": 91,
-    "imageUrl": "https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=600&q=80",
-    "isSaved": true
-  }
-];
+// lib/mock/mock_trip_summary.dart
 
-final Map<String, dynamic> mockTripSummaryData = {
-  "groupId": "group_kyoto_1",
-  "title": "Kyoto Itinerary",
-  "dates": "Jan 12 - Jan 18, 2026",
-  "destination": "Kyoto, Japan",
-  "budget": "RM1000",
-  "progress": 0.71,
-  "completedItems": 5,
-  "totalItems": 7,
-  "pendingDecisions": ["Budget", "Accommodation", "Transport"],
-  "confirmedDetails": {
-    "Destination": "Kyoto, Japan",
-    "Dates": "Jan 12 - 18",
-    "Traveller": "8 Friends",
-    "Duration": "7 days",
-    "Budget": "RM1000"
+final Map<String, Map<String, dynamic>> mockTripSummaryDatabase = {
+  "group_kyoto_1": {
+    "summary": {
+      "id": "sum_kyoto",
+      "title": "Kyoto Autumn Getaway",
+      "destination": "Kyoto, Japan",
+      "status": "Planning",
+      "dates": "Oct 15 - Oct 22, 2026",
+      "budgetRange": {"min": 1500, "max": 2000},
+      "selectedAccommodationIds": ["HOTEL_01"],
+      "confirmedDetails": {
+        "Flights": "Pending",
+        "Hotel": "Pending"
+      },
+      "totalItems": 7,
+      "pendingDecisions": ["Budget", "Accommodation", "Transport"]
+    },
+    "members": [
+      {
+        "id": "user_me",
+        "name": "You",
+        "avatarUrl": "https://i.pravatar.cc/150?img=11",
+        "role": "Host",
+        "isMe": true,
+        "leaveBalanceSummary": "18 Days Available",
+        "minBudget": 2000,
+        "maxBudget": 5000,
+        "preferences": ["Food", "Culture"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_1",
+        "name": "Sarah Chen",
+        "avatarUrl": "assets/avatars/ski-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 1800,
+        "maxBudget": 4800,
+        "preferences": ["Cafes", "Temple walks"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_2",
+        "name": "Alex Wong",
+        "avatarUrl": "assets/avatars/paris-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 1500,
+        "maxBudget": 4500,
+        "preferences": ["Nightlife"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_3",
+        "name": "Miriam Al-Jamil",
+        "avatarUrl": "assets/avatars/hiking-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 2000,
+        "maxBudget": 5200,
+        "preferences": ["Museums", "Food"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      },
+      {
+        "id": "collab_4",
+        "name": "David Tan",
+        "avatarUrl": "assets/avatars/green-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "leaveBalanceSummary": "12 Days Available",
+        "minBudget": 1200,
+        "maxBudget": 4200,
+        "preferences": ["Quiet neighborhoods"],
+        "dateRange": "Oct 15 - Oct 22, 2026"
+      }
+    ],
+    "suggestions": [
+      {
+        "id": "sug_1",
+        "title": "Kiyomizu-dera",
+        "location": "Higashiyama, Kyoto",
+        "category": "Culture",
+        "matchPercentage": 94,
+        "imageUrl": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80"
+      }
+    ]
   },
-  "preferenceTags": [
-    "5-star hotel",
-    "no seafood",
-    "prefers transit",
-    "high-efficiency pace",
-    "low-crowd spaces"
-  ],
-  "isReadyToPlan": true
+
+  "group_bali_2": {
+    "summary": {
+      "id": "sum_bali",
+      "title": "Bali Retreat 2026",
+      "destination": "Bali, Indonesia",
+      "status": "Planning",
+      "dates": "Nov 1 - Nov 7, 2026",
+      "confirmedDetails": {
+        "Flights": "Booked",
+        "Hotel": "Pending"
+      },
+      "totalItems": 7,
+      "pendingDecisions": ["Accommodation", "Activities", "Budget"]
+    }, // <-- REMOVED THE EXTRA }, THAT WAS HERE
+    "members": [
+      {
+        "id": "user_me",
+        "name": "You",
+        "avatarUrl": "https://i.pravatar.cc/150?img=11",
+        "role": "Member",
+        "isMe": true,
+        "minBudget": 1000,
+        "maxBudget": 3000,
+        "preferences": ["Beach", "Relaxation"],
+        "dateRange": "Nov 1 - Nov 7"
+      },
+      {
+        "id": "collab_6",
+        "name": "Sarah Jenkins",
+        "avatarUrl": "https://i.pravatar.cc/150?img=5",
+        "role": "Host",
+        "isMe": false,
+        "minBudget": 1000,
+        "maxBudget": 4000,
+        "preferences": ["Spa", "Food"],
+        "dateRange": "Nov 1 - Nov 7"
+      },
+      {
+        "id": "collab_2",
+        "name": "Alex Wong",
+        "avatarUrl": "assets/avatars/paris-traveller.jpg",
+        "role": "Member",
+        "isMe": false,
+        "minBudget": 1500,
+        "maxBudget": 3500,
+        "preferences": ["Nightlife", "Beach"],
+        "dateRange": "Nov 1 - Nov 7"
+      }
+    ],
+    "suggestions": []
+  },
+
+  "group_seoul_3": {
+    "summary": {
+      "id": "sum_seoul",
+      "title": "Seoul Food & Shopping",
+      "destination": "Seoul, South Korea",
+      "status": "Planning",
+      "dates": "Dec 10 - Dec 18, 2026",
+      "confirmedDetails": {
+        "Flights": "Pending",
+        "Hotel": "Pending"
+      },
+      "totalItems": 7,
+      "pendingDecisions": ["Flights", "Accommodation", "Budget"]
+    },
+    "members": [
+      {
+        "id": "user_me",
+        "name": "You",
+        "avatarUrl": "https://i.pravatar.cc/150?img=11",
+        "role": "Host",
+        "isMe": true,
+        "minBudget": 3000,
+        "maxBudget": 6000,
+        "preferences": ["Shopping", "Food"],
+        "dateRange": "Dec 10 - Dec 18"
+      },
+      {
+        "id": "collab_4",
+        "name": "Mei",
+        "avatarUrl": "https://i.pravatar.cc/150?img=9",
+        "role": "Member",
+        "isMe": false,
+        "minBudget": 2500,
+        "maxBudget": 5000,
+        "preferences": ["Shopping"],
+        "dateRange": "Dec 10 - Dec 18"
+      }
+    ],
+    "suggestions": []
+  }
 };
-
-final List<Map<String, dynamic>> mockGroupMembersData = [
-  {
-    "id": "user_me",
-    "name": "Ying (You)",
-    "role": "Host",
-    "avatarUrl": "https://i.pravatar.cc/150?img=5",
-    "preferences": ["Morning start", "Local street food", "No fast pace"],
-    "leaveBalanceSummary": "14 Days Available",
-    "minBudget": 1000.0,
-    "maxBudget": 5000.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": true
-  },
-  {
-    "id": "collab_2",
-    "name": "Alex Wong",
-    "role": "Member",
-    "avatarUrl": "https://i.pravatar.cc/150?img=2",
-    "preferences": ["Avoid crowded spots", "City photography"],
-    "leaveBalanceSummary": "8 Days Available",
-    "minBudget": 1500.0,
-    "maxBudget": 4000.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false
-  },
-  {
-    "id": "collab_3",
-    "name": "Ving Ang",
-    "role": "Member",
-    "avatarUrl": "https://i.pravatar.cc/150?img=3",
-    "preferences": ["Anime & Museums", "Ramen hunting"],
-    "leaveBalanceSummary": "10 Days Available",
-    "minBudget": 2000.0,
-    "maxBudget": 6000.0,
-    "dateRange": "Jun 12 - Jun 18, 2026",
-    "isMe": false
-  }
-];

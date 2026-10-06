@@ -6,21 +6,13 @@ class LocationDropdownField extends StatelessWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
   final List<String> locations;
-  final List<String>? options;
 
   const LocationDropdownField({
     super.key,
     required this.hint,
     required this.value,
     required this.onChanged,
-    this.locations = const [
-      'Kuala Lumpur',
-      'Penang',
-      'Ipoh',
-      'Langkawi',
-      'Tokyo',
-    ],
-    this.options,
+    this.locations = const ['Kuala Lumpur', 'Penang', 'Ipoh', 'Langkawi', 'Tokyo'],
   });
 
   @override
@@ -45,18 +37,12 @@ class LocationDropdownField extends StatelessWidget {
             ],
           ),
           isExpanded: true,
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: AppTheme.textMuted,
-          ),
-          items: (options ?? locations)
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textMuted),
+          items: locations
               .map(
                 (loc) => DropdownMenuItem(
                   value: loc,
-                  child: Text(
-                    loc,
-                    style: const TextStyle(color: AppTheme.textDark),
-                  ),
+                  child: Text(loc, style: const TextStyle(color: AppTheme.textDark)),
                 ),
               )
               .toList(),

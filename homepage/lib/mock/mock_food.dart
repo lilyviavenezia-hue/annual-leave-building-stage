@@ -9,6 +9,10 @@ final mockFoodSearchResults = {
       "cuisine_type": "Ramen",
       "price_tier": "¥¥",
       "description": "Rich black garlic broth. Local counter seating.",
+      "menu_items": ["Black garlic ramen", "Gyoza", "Chashu rice"],
+      "price": "¥¥",
+      "opening_hours": "11:00 AM – 10:00 PM",
+      "location": "Gion, Kyoto",
       "rating": 4.8,
       "review_count": 120
     },
@@ -19,6 +23,10 @@ final mockFoodSearchResults = {
       "cuisine_type": "Kaiseki",
       "price_tier": "¥¥¥",
       "description": "Authentic multi-course dining overlooking Japanese gardens.",
+      "menu_items": ["Seasonal kaiseki course", "Tea pairing"],
+      "price": "¥¥¥",
+      "opening_hours": "5:00 PM – 9:00 PM",
+      "location": "Higashiyama, Kyoto",
       "rating": 4.9,
       "review_count": 86
     },
@@ -29,6 +37,10 @@ final mockFoodSearchResults = {
       "cuisine_type": "Street Food",
       "price_tier": "¥",
       "description": "Famous market stall supplying giant grilled oysters and seafood skewers.",
+      "menu_items": ["Grilled oysters", "Seafood skewers", "Market specials"],
+      "price": "¥",
+      "opening_hours": "9:00 AM – 5:00 PM",
+      "location": "Nishiki Market, Kyoto",
       "rating": 4.5,
       "review_count": 210
     }

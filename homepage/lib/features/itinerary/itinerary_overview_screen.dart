@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -177,7 +177,7 @@ class _ItineraryOverviewScreenState extends State<ItineraryOverviewScreen> {
   Widget _buildHeader(ItineraryOverview data) {
     final headerTitle = data.title;
     final headerSubtitle =
-        '${data.destination} · ${data.dateRange} · ${data.durationDays} days';
+        '${data.destination} ┬╖ ${data.dateRange} ┬╖ ${data.durationDays} days';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
